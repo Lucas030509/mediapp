@@ -36,12 +36,12 @@ export async function POST(request: Request) {
 
         if (error) {
             console.error("Login attempt failed:", error)
-            return NextResponse.redirect(new URL('/login?error=true', request.url)) // Falla: retorna al login con URL query `error`
+            return NextResponse.redirect(new URL('/login?error=true', request.url), 303)
         }
 
         // Éxito: envia al Core de la Aplicación
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        return NextResponse.redirect(new URL('/dashboard', request.url), 303)
     } catch (err: any) {
-        return NextResponse.redirect(new URL('/login?error=unknown', request.url))
+        return NextResponse.redirect(new URL('/login?error=unknown', request.url), 303)
     }
 }
