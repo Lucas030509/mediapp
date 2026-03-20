@@ -70,24 +70,12 @@ export default function MarketingPage() {
                         
                         {/* Mockup Preview de la App */}
                         <div className="w-full max-w-5xl bg-slate-900/5 p-4 rounded-3xl border border-slate-200/50 shadow-2xl relative animate-in fade-in fade-in zoom-in-95 duration-1000 delay-500">
-                            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 rounded-b-3xl"></div>
-                            <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative h-[400px] flex">
-                                {/* Pseud-sidebar */}
-                                <div className="w-48 bg-slate-900 p-4 shrink-0 flex flex-col gap-4">
-                                    <div className="w-8 h-8 rounded bg-teal-500/20 backdrop-blur mb-6"></div>
-                                    <div className="w-full h-8 rounded-lg bg-white/5"></div>
-                                    <div className="w-full h-8 rounded-lg bg-white/5"></div>
-                                    <div className="w-full h-8 rounded-lg bg-teal-500/20 text-teal-400 font-bold flex items-center px-2 text-xs">Agenda Hoy</div>
-                                </div>
-                                {/* Pseudo-content */}
-                                <div className="flex-1 bg-slate-50 p-6">
-                                    <div className="w-64 h-8 bg-slate-200 rounded-lg mb-8"></div>
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm col-span-2 h-40"></div>
-                                        <div className="bg-teal-50 p-4 rounded-xl border border-teal-100 shadow-sm h-40"></div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white to-transparent z-10 rounded-b-3xl pointer-events-none"></div>
+                            <img 
+                                src="/dashboard-preview.png" 
+                                alt="HealthCore OS Vista Principal" 
+                                className="rounded-2xl border border-slate-200 shadow-sm relative w-full h-auto object-cover" 
+                            />
                         </div>
                     </div>
                 </section>
