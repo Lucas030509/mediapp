@@ -82,11 +82,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                         <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
                     </Link>
 
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3 mt-8">Clínica & EHR</div>
+                    <Link href="/consulta" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">
+                        <Stethoscope className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                        <span className="font-medium">Consulta Médica (EHR)</span>
+                    </Link>
+
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3 mt-8">Clínica & Reportes</div>
 
                     <Link href="/ehr" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">
                         <FileText className="w-5 h-5 text-slate-400 group-hover:text-blue-400 transition-colors" />
-                        <span className="font-medium">Historia Clínica</span>
+                        <span className="font-medium">Historia Clínica Completa</span>
                     </Link>
 
                     <Link href="/plantillas" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">

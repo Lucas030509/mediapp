@@ -1,12 +1,14 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MapPin, Video, CheckCircle2, User, Stethoscope, Plus, X, Calendar as CalendarIcon, AlertCircle, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MapPin, Video, CheckCircle2, User, Stethoscope, Plus, X, Calendar as CalendarIcon, AlertCircle, Trash2, Play } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 export default function AgendaPage() {
     const supabase = createClient();
+    const router = useRouter();
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [appointments, setAppointments] = useState<any[]>([]);
@@ -57,11 +59,18 @@ export default function AgendaPage() {
 
     const fetchAppointments = async (date: Date) => {
         setLoading(true);
-        const offset = date.getTimezoneOffset() * 60000;
-        const localDate = new Date(date.getTime() - offset);
-        const dateString = localDate.toISOString().split('T')[0];
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // 1. Obtener perfil
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id || '').single();
 
-        const { data, error } = await supabase
+        // 2. Generar fecha local exacta YYYY-MM-DD sin errores de zona horaria
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
+        let query = supabase
             .from('appointments')
             .select(`
                 *,
@@ -69,8 +78,13 @@ export default function AgendaPage() {
                 doctors(first_name, last_name, second_last_name),
                 rooms(name)
             `)
-            .eq('appointment_date', dateString)
-            .order('start_time', { ascending: true });
+            .eq('appointment_date', dateString);
+
+        if (profile?.role === 'doctor' && profile.doctor_id) {
+            query = query.eq('doctor_id', profile.doctor_id);
+        }
+
+        const { data, error } = await query.order('start_time', { ascending: true });
 
         if (data) setAppointments(data);
         setLoading(false);
@@ -103,6 +117,35 @@ export default function AgendaPage() {
         e.preventDefault();
         setSaving(true);
 
+        // 1. VALIDACIÓN DE CHOQUES (OVERLAP)
+        // Buscamos colisiones para el mismo día
+        const { data: conflicts } = await supabase
+            .from('appointments')
+            .select('id, start_time, end_time, doctor_id, room_id, status')
+            .eq('appointment_date', formData.appointment_date)
+            .neq('status', 'cancelled'); // Ignorar si está cancelada
+
+        const hasOverlap = conflicts?.some(c => {
+            // Un choque ocurre si: (Es el mismo doctor O es el mismo consultorio) Y (Los horarios se enciman)
+            const sameDoctor = c.doctor_id === formData.doctor_id;
+            const sameRoom = formData.room_id && c.room_id === formData.room_id;
+            
+            // Condición de solapamiento matemático: (A.inicio < B.fin) && (A.fin > B.inicio)
+            const timeOverlap = (formData.start_time < c.end_time) && (formData.end_time > c.start_time);
+            
+            return (sameDoctor || sameRoom) && timeOverlap;
+        });
+
+        if (hasOverlap) {
+            toast.error("¡ALERTA!: Cruce detectado. El médico o el consultorio ya están ocupados en este horario.", {
+                duration: 5000,
+                icon: '🚫'
+            });
+            setSaving(false);
+            return;
+        }
+
+        // 2. PROCEDER SI TODO ESTÁ LIBRE
         const { error } = await supabase.from('appointments').insert([{
             patient_id: formData.patient_id,
             doctor_id: formData.doctor_id,
@@ -315,7 +358,15 @@ export default function AgendaPage() {
                                                 <div className="flex flex-col items-end justify-between gap-2 border-l border-slate-100 pl-4">
                                                     <div className="flex items-center gap-2">
                                                         {cita.status === 'scheduled' && (
-                                                            <button onClick={() => updateStatus(cita.id, 'in-progress')} className="text-[10px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1.5 rounded transition shadow-sm border border-indigo-100">Iniciar</button>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    updateStatus(cita.id, 'in-progress');
+                                                                    router.push(`/consulta/${cita.id}`);
+                                                                }} 
+                                                                className="text-[10px] font-bold bg-indigo-600 text-white hover:bg-slate-900 px-3 py-1.5 rounded-xl transition shadow-lg shadow-indigo-500/20 border border-indigo-100 flex items-center gap-1 active:scale-95"
+                                                            >
+                                                                <Play className="w-3 h-3" /> Atender
+                                                            </button>
                                                         )}
                                                         {cita.status === 'in-progress' && (
                                                             <button onClick={() => updateStatus(cita.id, 'completed')} className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1.5 rounded transition shadow-sm">Completar</button>
