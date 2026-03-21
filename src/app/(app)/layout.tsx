@@ -2,8 +2,43 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { Home, Settings, Users, Calendar, FileText, Video, Receipt, Activity, LogOut, Stethoscope, ClipboardList, Building2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() { return cookieStore.getAll() },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+                    } catch (error) { }
+                },
+            },
+        }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Intentar obtener el perfil real de la DB
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id || '')
+        .single();
+
+    const displayName = profile 
+        ? `${profile.first_name} ${profile.last_name}` 
+        : user?.user_metadata?.first_name 
+            ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`
+            : user?.email || 'Dr. Administrador';
+
+    const displayRole = profile?.role || 'Personal Médico';
+
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-teal-500 selection:text-white">
             {/* Sidebar de alta fidelidad estética */}
@@ -111,8 +146,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
                     <div className="flex items-center gap-5">
                         <div className="flex flex-col text-right">
-                            <span className="text-sm font-bold text-slate-800">Dr. Administrador</span>
-                            <span className="text-xs font-medium text-slate-500">Cardiología</span>
+                            <span className="text-sm font-bold text-slate-800">{displayName}</span>
+                            <span className="text-xs font-medium text-slate-500">{displayRole}</span>
                         </div>
                         <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-md"></div>
                     </div>
