@@ -16,6 +16,9 @@ export default function PatientEHRPage() {
     const [allergies, setAllergies] = useState<any[]>([]);
     const [templates, setTemplates] = useState<any[]>([]);
     const [surgeries, setSurgeries] = useState<any[]>([]);
+    const [lastVitals, setLastVitals] = useState<any>(null); // Nuevo: Últimos signos reales
+    const [doctorProfile, setDoctorProfile] = useState<any>(null); // Nuevo: Datos del Dr actual
+
     const [isAllergiesModalOpen, setIsAllergiesModalOpen] = useState(false);
     const [newAllergy, setNewAllergy] = useState({ name: '', severity: 'MEDIUM' });
 
@@ -44,29 +47,38 @@ export default function PatientEHRPage() {
     }, [id]);
 
     const fetchPatient = async () => {
+        // 1. Datos básicos
         const { data } = await supabase.from('patients').select('*').eq('id', id).single();
         if(data) {
             setPatient(data);
             setClinicalSummary(data.clinical_summary || '');
         }
+
+        // 2. Perfil del Doctor Actual para Recetas (Rx)
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: prof } = await supabase.from('profiles').select('*, doctors(first_name, last_name, specialty)').eq('id', user?.id || '').single();
+        if (prof) setDoctorProfile(prof);
         
-        // Cargar imágenes de la Fase 3
+        // 3. Cargar últimos Signos Vitales Reales
+        const { data: vRes } = await supabase.from('vital_signs').select('*').eq('patient_id', id).order('created_at', { ascending: false }).limit(1);
+        if (vRes && vRes.length > 0) setLastVitals(vRes[0]);
+        
+        // Cargar imágenes, notas, alergias, plantillas y cirugías
         const { data: docsRes } = await supabase.from('patient_documents').select('*').eq('patient_id', id).order('created_at', { ascending: false });
         if(docsRes) setDocuments(docsRes);
 
-        // Cargar Notas Clínicas de la Fase 4
-        const { data: notesRes } = await supabase.from('clinical_notes').select('*').eq('patient_id', id).order('consultation_date', { ascending: false }).order('created_at', { ascending: false });
+        const { data: notesRes } = await supabase.from('clinical_notes').select(`
+            *,
+            doctors(first_name, last_name)
+        `).eq('patient_id', id).order('consultation_date', { ascending: false }).order('created_at', { ascending: false });
         if(notesRes) setNotes(notesRes);
 
-        // Cargar Alergias
         const { data: allergiesRes } = await supabase.from('patient_allergies').select('*').eq('patient_id', id).order('created_at', { ascending: false });
         if (allergiesRes) setAllergies(allergiesRes);
 
-        // Cargar Plantillas del Doctor
         const { data: templatesRes } = await supabase.from('ehr_templates').select('*').order('template_name', { ascending: true });
         if (templatesRes) setTemplates(templatesRes);
 
-        // Cargar Cirugías Previas
         const { data: surgRes } = await supabase.from('patient_surgeries').select('*').eq('patient_id', id).order('surgery_date', { ascending: false });
         if (surgRes) setSurgeries(surgRes);
     };
@@ -368,7 +380,7 @@ export default function PatientEHRPage() {
                                                     <div>
                                                         <h4 className="font-bold text-slate-800 text-lg">Nota de Evolución</h4>
                                                         <p className="text-sm text-slate-500 font-semibold flex items-center gap-2 mt-0.5">
-                                                            {new Date(note.consultation_date).toLocaleDateString()} • Resumen Médico Guardado
+                                                            {new Date(note.consultation_date).toLocaleDateString()} • Dr. {note.doctors?.last_name || 'Admin'}
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -394,8 +406,8 @@ export default function PatientEHRPage() {
                                                         >
                                                             Eliminar
                                                         </button>
-                                                        <span className="bg-white border border-slate-200 px-3 py-1 rounded-md text-slate-600 font-bold text-xs h-fit shadow-sm flex items-center gap-1 group-hover:opacity-60 transition-opacity">
-                                                            <Award className="w-3 h-3 text-emerald-500" /> Auditado (ARMED)
+                                                        <span className="bg-white border border-slate-200 px-3 py-1 rounded-md text-slate-600 font-bold text-xs h-fit shadow-sm flex items-center gap-1 group-hover:opacity-60 transition-opacity uppercase px-2">
+                                                            {note.status === 'final' ? 'Finalizada' : 'Borrador'} 
                                                         </span>
                                                     </div>
                                                 </div>
@@ -561,9 +573,10 @@ export default function PatientEHRPage() {
                                     <p className="text-sm font-bold text-slate-800 uppercase"><span className="text-slate-500 font-medium normal-case">Paciente:</span> {patient.first_name} {patient.last_name} {patient.second_last_name || ''}</p>
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Edad:</span> {calculateAge(patient.date_of_birth)} años</p>
-                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Peso:</span> --- kg</p>
-                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Talla:</span> --- m</p>
-                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Temp:</span> --- °C</p>
+                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Peso:</span> {lastVitals?.weight || '---'} kg</p>
+                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Talla:</span> {lastVitals?.height || '---'} m</p>
+                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Presión:</span> {lastVitals?.systolic || '--'}/{lastVitals?.diastolic || '--'}</p>
+                                        <p className="text-xs font-semibold text-slate-700"><span className="text-slate-400">Temp:</span> {lastVitals?.temperature || '---'} °C</p>
                                     </div>
                                     {allergies.length > 0 && (
                                         <p className="text-xs font-bold text-red-600 mt-3 pt-3 border-t border-slate-200/50 uppercase tracking-wide">⚠ ALERGIAS: {allergies.map(a => a.allergen_name).join(', ')}</p>
@@ -579,8 +592,8 @@ export default function PatientEHRPage() {
 
                                 <div className="mt-8 pt-8 text-center print:bottom-12 print:absolute print:left-0 print:right-0">
                                     <div className="w-64 border-b border-slate-800 mx-auto mb-2 h-16"></div>
-                                    <p className="text-sm font-extrabold text-slate-800">Firma del Médico Titular</p>
-                                    <p className="text-xs font-bold text-slate-500 mt-1">Cédula Profesional: _______________</p>
+                                    <p className="text-sm font-extrabold text-slate-800">Dr. {doctorProfile?.doctors?.first_name} {doctorProfile?.doctors?.last_name}</p>
+                                    <p className="text-xs font-bold text-slate-500 mt-1">{doctorProfile?.doctors?.specialty || 'Médico General'}</p>
                                 </div>
                             </div>
                         </div>

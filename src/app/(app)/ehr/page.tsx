@@ -1,168 +1,149 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Search, FileText, Activity, Pill, Scissors, FileCode2, Clock, ChevronDown, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, User, ChevronRight, FileText, Database, Activity, Heart, Calendar } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function EHRPage() {
-    const [activeTab, setActiveTab] = useState('timeline');
+export default function EHRSearchPage() {
+    const supabase = createClient();
+    const router = useRouter();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [patients, setPatients] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchRecentPatients();
+    }, []);
+
+    const fetchRecentPatients = async () => {
+        setLoading(true);
+        const { data } = await supabase
+            .from('patients')
+            .select('id, first_name, last_name, second_last_name, date_of_birth, gender, blood_type')
+            .order('last_name', { ascending: true })
+            .limit(20);
+        
+        if (data) setPatients(data);
+        setLoading(false);
+    };
+
+    const filteredPatients = patients.filter(p => 
+        `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const calculateAge = (dob: string) => {
+        if (!dob) return '-';
+        const diff = Date.now() - new Date(dob).getTime();
+        return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+    };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-start">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Header Pro */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Historia Clínica Electrónica</h1>
-                    <p className="text-slate-500 mt-1 font-medium">Expediente Clínico Universal e interoperable (EHR).</p>
-                </div>
-                <div className="relative w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <input type="text" placeholder="Buscar expediente (ej. EXP-0921)" className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl outline-none font-medium text-sm transition-all shadow-sm text-slate-700" />
-                </div>
-            </div>
-
-            {/* Patient Header Block */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
-                <div className="flex gap-4 items-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 flex flex-col items-center justify-center text-white font-bold tracking-tight">
-                        EP
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-                            Elena Peña Rodríguez
-                            <span className="bg-blue-50 text-blue-600 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-blue-100">Exp. 0921-A</span>
-                        </h2>
-                        <div className="flex gap-4 text-sm font-semibold text-slate-500 mt-1.5">
-                            <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-rose-400" /> O+</span>
-                            <span>34 Años</span>
-                            <span>Femenino</span>
-                        </div>
-                    </div>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 italic uppercase">Historia Clínica Completa</h1>
+                    <p className="text-slate-500 mt-1 font-medium italic">Acceso centralizado a todos los expedientes médicos de la clínica.</p>
                 </div>
 
-                <div className="flex gap-3">
-                    <div className="px-4 py-2 bg-rose-50 border border-rose-100 rounded-xl">
-                        <span className="block text-xs font-bold text-rose-500 uppercase tracking-wider mb-0.5">Alergias</span>
-                        <span className="text-sm font-semibold text-rose-700">Penicilina</span>
-                    </div>
-                    <div className="px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl">
-                        <span className="block text-xs font-bold text-amber-600 uppercase tracking-wider mb-0.5">Riesgo Quirúrgico</span>
-                        <span className="text-sm font-semibold text-amber-700">Bajo (ASA I)</span>
-                    </div>
+                <div className="relative w-full md:w-96 group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar paciente por nombre o apellido..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 shadow-sm font-bold text-sm outline-none transition-all placeholder:text-slate-300"
+                    />
                 </div>
             </div>
 
-            {/* EHR Navigation Module */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Navigation column */}
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 h-fit space-y-1.5">
-                    <button onClick={() => setActiveTab('timeline')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'timeline' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
-                        <Clock className={`w-5 h-5 ${activeTab === 'timeline' ? 'text-blue-600' : 'text-slate-400'}`} />
-                        Línea del Tiempo
-                    </button>
-                    <button onClick={() => setActiveTab('notes')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'notes' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
-                        <FileText className={`w-5 h-5 ${activeTab === 'notes' ? 'text-blue-600' : 'text-slate-400'}`} />
-                        Notas Clínicas
-                    </button>
-                    <button onClick={() => setActiveTab('rx')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'rx' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
-                        <Pill className={`w-5 h-5 ${activeTab === 'rx' ? 'text-blue-600' : 'text-slate-400'}`} />
-                        Recetas (Vademécum)
-                    </button>
-                    <button onClick={() => setActiveTab('surgical')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'surgical' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
-                        <Scissors className={`w-5 h-5 ${activeTab === 'surgical' ? 'text-blue-600' : 'text-slate-400'}`} />
-                        Historial Quirúrgico
-                    </button>
-                    <button onClick={() => setActiveTab('docs')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'docs' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
-                        <FileCode2 className={`w-5 h-5 ${activeTab === 'docs' ? 'text-blue-600' : 'text-slate-400'}`} />
-                        Estudios y Consentimientos
-                    </button>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <StatBox icon={<User className="text-blue-500" />} label="Pacientes Registrados" value="Real-time" />
+                <StatBox icon={<Database className="text-indigo-500" />} label="Expedientes Activos" value={patients.length} />
+                <StatBox icon={<Heart className="text-rose-500" />} label="Urgencias" value="0" />
+                <StatBox icon={<Activity className="text-emerald-500" />} label="Sincronización" value="Ok" />
+            </div>
+
+            {/* Patients List Table/Cards */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden min-h-[500px]">
+                <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                    <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg uppercase tracking-tight italic">
+                        <FileText className="w-5 h-5 text-blue-500" /> Directorio de Expedientes
+                    </h3>
                 </div>
 
-                {/* Content Area */}
-                <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-
-                    {activeTab === 'timeline' && (
-                        <div className="animate-in fade-in duration-300">
-                            <div className="flex justify-between items-center mb-8">
-                                <h3 className="text-xl font-bold text-slate-800">Cronología de Visitas</h3>
-                                <button className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition">+ Nueva Nota Médica</button>
-                            </div>
-
-                            <div className="relative border-l-2 border-slate-100 ml-4 space-y-8">
-
-                                {/* Record 1 */}
-                                <div className="relative pl-8">
-                                    <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full border-4 border-white bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shadow-sm">
-                                        <FileText className="w-4 h-4" />
+                {loading ? (
+                    <div className="p-20 text-center text-slate-400 font-bold italic animate-pulse">Consultando base de datos médica...</div>
+                ) : filteredPatients.length === 0 ? (
+                    <div className="p-20 text-center flex flex-col items-center gap-4">
+                        <Search className="w-16 h-16 text-slate-100" />
+                        <p className="text-slate-400 font-bold italic">No se encontraron pacientes en tu base de datos clínica.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8">
+                        {filteredPatients.map((patient) => (
+                            <Link 
+                                key={patient.id} 
+                                href={`/ehr/${patient.id}`}
+                                className="group relative bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300"
+                            >
+                                <div className="flex items-start gap-4 mb-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-black text-xl group-hover:scale-110 group-hover:from-blue-600 group-hover:to-indigo-700 group-hover:text-white transition-all shadow-inner">
+                                        {patient.first_name?.[0]}{patient.last_name?.[0]}
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
-                                        <div className="flex justify-between mb-4">
-                                            <div>
-                                                <h4 className="font-bold text-slate-800 text-lg">Consulta de Seguimiento Cardiológico</h4>
-                                                <p className="text-sm text-slate-500 font-semibold flex items-center gap-2 mt-0.5">
-                                                    12 Octubre 2025 • Dr. Administrador
-                                                </p>
-                                            </div>
-                                            <span className="bg-white border border-slate-200 px-3 py-1 rounded-md text-slate-600 font-bold text-xs h-fit shadow-sm flex items-center gap-1">
-                                                <Award className="w-3 h-3 text-emerald-500" /> Firmado Electrónicamente
-                                            </span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Motivo de Consulta</span>
-                                                <p className="text-sm text-slate-700 font-medium">Paciente acude a revisión de rutina y ajuste de tratamiento por cifras tensionales ocasionalmente elevadas por las mañanas.</p>
-                                            </div>
-                                            <div>
-                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnóstico Específico (CIE-10)</span>
-                                                <p className="text-sm text-blue-700 bg-blue-50 inline-block px-2 py-1 rounded font-semibold border border-blue-100">
-                                                    I10 - Hipertensión esencial (primaria)
-                                                </p>
-                                            </div>
-                                        </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-black text-slate-900 group-hover:text-blue-600 transition-colors text-lg leading-tight uppercase italic line-clamp-2">
+                                            {patient.first_name} {patient.last_name}
+                                        </h4>
+                                        <p className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-widest tracking-tighter">Expediente General</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-3 mb-6">
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-50">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Edad</p>
+                                        <p className="text-sm font-bold text-slate-700">{calculateAge(patient.date_of_birth)} años</p>
+                                    </div>
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-50">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Sangre</p>
+                                        <p className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                                            <Activity className="w-3 h-3 text-rose-500" /> {patient.blood_type || 'S/R'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Record 2 */}
-                                <div className="relative pl-8">
-                                    <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full border-4 border-white bg-purple-100 text-purple-600 flex items-center justify-center font-bold shadow-sm">
-                                        <FileCode2 className="w-4 h-4" />
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        <span>Gén: {patient.gender === 'M' ? 'Masc' : 'Fem'}</span>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
-                                        <div className="flex justify-between mb-4">
-                                            <div>
-                                                <h4 className="font-bold text-slate-800 text-lg">Recepción de Resultados: Electrocardiograma</h4>
-                                                <p className="text-sm text-slate-500 font-semibold mt-0.5">
-                                                    15 Septiembre 2025 • Laboratorio Externo
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200">
-                                            <div className="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center">
-                                                <span className="text-xs font-extrabold">PDF</span>
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-bold text-slate-800">ECG_Reposo_ElenaP_Sep2025.pdf</p>
-                                                <p className="text-xs text-slate-500 font-medium">1.2 MB • Interpretado por Dr. A. Méndez</p>
-                                            </div>
-                                            <button className="text-blue-600 font-bold text-sm px-3 hover:underline">Ver Documento</button>
-                                        </div>
-                                    </div>
+                                    <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100 uppercase tracking-tighter group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                                        Ver Historia Completa
+                                    </span>
                                 </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Si es otra pestaña muestra mockup de vacío */}
-                    {activeTab !== 'timeline' && (
-                        <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-slate-400 animate-in fade-in">
-                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                                <FileText className="w-8 h-8 text-slate-300" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-600 mb-1">Sección en Construcción</h3>
-                            <p className="text-sm font-medium">Selecciona 'Línea del Tiempo' para ver el demo completo.</p>
-                        </div>
-                    )}
-
-                </div>
+function StatBox({ icon, label, value }: any) {
+    return (
+        <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md active:scale-95">
+            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-inner">
+                {React.cloneElement(icon, { className: "w-6 h-6" })}
+            </div>
+            <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</p>
+                <p className="text-lg font-black text-slate-900 tracking-tighter italic">{value}</p>
             </div>
         </div>
     );
