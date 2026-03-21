@@ -40,15 +40,31 @@ export default function DoctoresPage() {
         setLoading(false);
     };
 
-    const handleDelete = async (id: string, name: string) => {
-        if (confirm(`¿Estás seguro de eliminar a ${name}? Esta acción no se puede deshacer.`)) {
-            const { error } = await supabase.from('doctors').delete().eq('id', id);
-            if (!error) {
-                fetchDoctors();
-            } else {
-                toast.error("Error al eliminar el médico.");
-                console.error(error);
-            }
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
+        isOpen: false,
+        id: '',
+        name: ''
+    });
+
+    const handleDelete = async () => {
+        const { id } = deleteModal;
+        if (!id) return;
+        
+        console.log("Intentando eliminar médico con ID:", id);
+        
+        const { error, status } = await supabase
+            .from('doctors')
+            .delete()
+            .eq('id', id);
+        
+        if (!error) {
+            toast.success("Médico removido de la plataforma");
+            setDeleteModal({ isOpen: false, id: '', name: '' });
+            // Forzamos un pequeño delay para que Supabase termine la transacción antes de re-consultar
+            setTimeout(() => fetchDoctors(), 500);
+        } else {
+            toast.error("Error al eliminar: " + (error.message || "Error desconocido"));
+            console.error("Error de Supabase:", error);
         }
     };
 
@@ -185,7 +201,14 @@ export default function DoctoresPage() {
                                             <button onClick={(e) => { e.stopPropagation(); setEditId(doc.id); setFormData({ first_name: doc.first_name, last_name: doc.last_name, second_last_name: doc.second_last_name || '', rfc: doc.rfc || '', specialty_id: doc.specialty_id || '', license_number: doc.license_number, phone: doc.phone || '', email: doc.email || '' }); setIsModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block text-slate-600" title="Editar">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(doc.id, doc.first_name); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-block text-slate-600" title="Eliminar">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    setDeleteModal({ isOpen: true, id: doc.id, name: `${doc.first_name} ${doc.last_name}` }); 
+                                                }} 
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-block text-slate-600" 
+                                                title="Eliminar"
+                                            >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </td>
@@ -293,6 +316,37 @@ export default function DoctoresPage() {
                 </div>
             )}
 
+            {/* Modal de Confirmación de Eliminación Premium */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}></div>
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trash2 className="w-10 h-10 text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-2">Eliminar Médico</h3>
+                            <p className="text-slate-500 font-medium leading-relaxed">
+                                Estas a punto de retirar de la clínica a <span className="text-slate-900 font-bold">{deleteModal.name}</span>. Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button 
+                                onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                                className="flex-1 px-4 py-3 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleDelete}
+                                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

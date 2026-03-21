@@ -28,13 +28,21 @@ export default function AgendaPage() {
         is_video: false,
     });
 
+    const [config, setConfig] = useState({ duration: 30, hours: {} });
+
     useEffect(() => {
         fetchBaseData();
+        fetchClinicConfig();
     }, []);
 
     useEffect(() => {
         fetchAppointments(currentDate);
     }, [currentDate]);
+
+    const fetchClinicConfig = async () => {
+        const { data } = await supabase.from('clinic_settings').select('consultation_duration_minutes, business_hours').single();
+        if (data) setConfig({ duration: data.consultation_duration_minutes, hours: data.business_hours });
+    };
 
     const fetchBaseData = async () => {
         const [{ data: pData }, { data: dData }, { data: rData }] = await Promise.all([
@@ -49,7 +57,6 @@ export default function AgendaPage() {
 
     const fetchAppointments = async (date: Date) => {
         setLoading(true);
-        // Ajuste de zona horaria local segura evitando T00:00:00.000Z offsets
         const offset = date.getTimezoneOffset() * 60000;
         const localDate = new Date(date.getTime() - offset);
         const dateString = localDate.toISOString().split('T')[0];
@@ -75,11 +82,20 @@ export default function AgendaPage() {
         else toast.error("Error al actualizar estatus: " + error.message);
     };
 
-    const deleteAppointment = async (id: string) => {
-        if (confirm("¿Estás seguro de cancelar y eliminar esta cita? Acción irreversible.")) {
-            const { error } = await supabase.from('appointments').delete().eq('id', id);
-            if (!error) fetchAppointments(currentDate);
-            else toast.error("Error al cancelar cita: " + error.message);
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+
+    const deleteAppointment = async () => {
+        const { id } = deleteModal;
+        if (!id) return;
+        
+        const { error } = await supabase.from('appointments').delete().eq('id', id);
+        
+        if (!error) {
+            toast.success("Cita cancelada correctamente");
+            setDeleteModal({ isOpen: false, id: '', name: '' });
+            fetchAppointments(currentDate);
+        } else {
+            toast.error("Error al cancelar cita: " + error.message);
         }
     };
 
@@ -87,7 +103,7 @@ export default function AgendaPage() {
         e.preventDefault();
         setSaving(true);
 
-        let response = await supabase.from('appointments').insert([{
+        const { error } = await supabase.from('appointments').insert([{
             patient_id: formData.patient_id,
             doctor_id: formData.doctor_id,
             appointment_date: formData.appointment_date,
@@ -99,29 +115,6 @@ export default function AgendaPage() {
             status: 'scheduled'
         }]);
 
-        if (response.error && response.error.message.includes("Could not find the")) {
-            // Intento sin las columnas nuevas que puedan faltar en la BD local/remota
-            response = await supabase.from('appointments').insert([{
-                patient_id: formData.patient_id,
-                doctor_id: formData.doctor_id,
-                appointment_date: formData.appointment_date,
-                start_time: formData.start_time,
-                end_time: formData.end_time
-            }]);
-            
-            // Si también falla por end_time, intentamos con el schema hiper básico
-            if (response.error && response.error.message.includes("Could not find the 'end_time'")) {
-                response = await supabase.from('appointments').insert([{
-                    patient_id: formData.patient_id,
-                    doctor_id: formData.doctor_id,
-                    appointment_date: formData.appointment_date,
-                    start_time: formData.start_time
-                }]);
-            }
-        }
-
-        const { error } = response;
-
         setSaving(false);
         if (!error) {
             setIsModalOpen(false);
@@ -130,8 +123,18 @@ export default function AgendaPage() {
             toast.success("Cita agendada correctamente");
         } else {
             toast.error("Error al agendar cita: " + error.message);
-            console.error(error);
         }
+    };
+
+    const handleStartTimeChange = (newStartTime: string) => {
+        const [h, m] = newStartTime.split(':').map(Number);
+        const date = new Date();
+        date.setHours(h, m + config.duration, 0);
+        
+        const endH = date.getHours().toString().padStart(2, '0');
+        const endM = date.getMinutes().toString().padStart(2, '0');
+        
+        setFormData({ ...formData, start_time: newStartTime, end_time: `${endH}:${endM}` });
     };
 
     const nextDay = () => {
@@ -146,7 +149,6 @@ export default function AgendaPage() {
         setCurrentDate(d);
     };
 
-    // Helper para formato 12 hrs
     const formatTime = (time24: string) => {
         if (!time24) return '';
         const [h, m] = time24.split(':');
@@ -161,7 +163,7 @@ export default function AgendaPage() {
         if (status === 'in-progress') return 'bg-teal-100 text-teal-700 font-bold border border-teal-200';
         if (type.toLowerCase().includes('tele')) return 'bg-purple-100 text-purple-700 border border-purple-200';
         if (type.toLowerCase().includes('proced')) return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-        return 'bg-blue-50 text-blue-700 border border-blue-100'; // Consulta default
+        return 'bg-blue-50 text-blue-700 border border-blue-100';
     };
 
     const openNewAppointmentModal = () => {
@@ -169,8 +171,8 @@ export default function AgendaPage() {
         const minutes = now.getMinutes();
         const addMinutes = minutes < 30 ? 30 - minutes : 60 - minutes;
 
-        const startTime = new Date(now.getTime() + addMinutes * 60000);
-        const endTime = new Date(startTime.getTime() + 30 * 60000);
+        const startTimeDate = new Date(now.getTime() + addMinutes * 60000);
+        const endTimeDate = new Date(startTimeDate.getTime() + config.duration * 60000);
 
         const formatTimeStr = (date: Date) => {
             const h = date.getHours().toString().padStart(2, '0');
@@ -185,8 +187,8 @@ export default function AgendaPage() {
         setFormData(prev => ({
             ...prev,
             appointment_date: dateString,
-            start_time: formatTimeStr(startTime),
-            end_time: formatTimeStr(endTime)
+            start_time: formatTimeStr(startTimeDate),
+            end_time: formatTimeStr(endTimeDate)
         }));
         setIsModalOpen(true);
     };
@@ -318,7 +320,15 @@ export default function AgendaPage() {
                                                         {cita.status === 'in-progress' && (
                                                             <button onClick={() => updateStatus(cita.id, 'completed')} className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1.5 rounded transition shadow-sm">Completar</button>
                                                         )}
-                                                        <button onClick={() => deleteAppointment(cita.id)} className="p-1 px-1.5 hover:bg-red-50 text-red-400 hover:text-red-500 rounded transition" title="Cancelar Cita">
+                                                        <button 
+                                                            onClick={() => setDeleteModal({ 
+                                                                isOpen: true, 
+                                                                id: cita.id, 
+                                                                name: cita.patients ? `${cita.patients.first_name} ${cita.patients.last_name}` : 'esta cita' 
+                                                            })} 
+                                                            className="p-1 px-1.5 hover:bg-red-50 text-red-400 hover:text-red-500 rounded transition" 
+                                                            title="Cancelar Cita"
+                                                        >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
@@ -393,7 +403,7 @@ export default function AgendaPage() {
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-xs font-bold text-slate-600 mb-1">Hora Inicio *</label>
-                                            <input required type="time" value={formData.start_time} onChange={e => setFormData({ ...formData, start_time: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" />
+                                            <input required type="time" value={formData.start_time} onChange={e => handleStartTimeChange(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-slate-600 mb-1">Hora Fin *</label>
@@ -425,6 +435,38 @@ export default function AgendaPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmación de Borrado */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setDeleteModal({ isOpen: false, id: '', name: '' })}>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertCircle className="w-10 h-10" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 mb-2">¿Cancelar esta cita?</h3>
+                            <p className="text-slate-500 font-medium leading-relaxed mb-8">
+                                Estás a punto de eliminar la cita de <strong className="text-slate-800 underline decoration-red-200">{deleteModal.name}</strong>. Esta acción no se puede deshacer.
+                            </p>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <button 
+                                    onClick={() => setDeleteModal({ isOpen: false, id: '', name: '' })}
+                                    className="py-4 px-6 rounded-2xl font-extrabold text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                                >
+                                    No, mantener
+                                </button>
+                                <button 
+                                    onClick={deleteAppointment}
+                                    className="py-4 px-6 rounded-2xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all active:scale-95"
+                                >
+                                    Sí, eliminar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

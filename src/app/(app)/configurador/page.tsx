@@ -1,61 +1,235 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Clock, Users, Shield, Save, Check, Calendar } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function ConfiguradorPage() {
-    const [roles, setRoles] = useState([
-        { position: "Vendedor", activeModules: ["ventas"] },
-        { position: "Contador", activeModules: ["finanzas", "buzon-tributario"] }
-    ]);
+    const supabase = createClient();
+    const [activeTab, setActiveTab] = useState<'roles' | 'clinica'>('clinica');
+    const [roles, setRoles] = useState<{ position: string, activeModules: string[] }[]>([]);
+    
+    // Clinic Settings State
+    const [duration, setDuration] = useState(30);
+    const [hours, setHours] = useState<any>({
+        monday: { start: '09:00', end: '18:00', active: true },
+        tuesday: { start: '09:00', end: '18:00', active: true },
+        wednesday: { start: '09:00', end: '18:00', active: true },
+        thursday: { start: '09:00', end: '18:00', active: true },
+        friday: { start: '09:00', end: '18:00', active: true },
+        saturday: { start: '09:00', end: '14:00', active: true },
+        sunday: { start: '09:00', end: '14:00', active: false },
+    });
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const fetchSettings = async () => {
+        const { data, error } = await supabase.from('clinic_settings').select('*').single();
+        if (data) {
+            setDuration(data.consultation_duration_minutes);
+            if (data.business_hours) setHours(data.business_hours);
+        }
+    };
+
+    const handleSaveSettings = async () => {
+        setSaving(true);
+        const { error } = await supabase.from('clinic_settings').upsert({
+            id: (await supabase.from('clinic_settings').select('id').single()).data?.id,
+            consultation_duration_minutes: duration,
+            business_hours: hours,
+            updated_at: new Date().toISOString()
+        });
+
+        setSaving(false);
+        if (!error) toast.success("Configuración actualizada correctamente");
+        else toast.error("Error al guardar: " + error.message);
+    };
+
+    const days = [
+        { key: 'monday', label: 'Lunes' },
+        { key: 'tuesday', label: 'Martes' },
+        { key: 'wednesday', label: 'Miércoles' },
+        { key: 'thursday', label: 'Jueves' },
+        { key: 'friday', label: 'Viernes' },
+        { key: 'saturday', label: 'Sábado' },
+        { key: 'sunday', label: 'Domingo' },
+    ];
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Configurador de Accesos</h1>
-            <div className="flex items-center gap-4 mt-2">
-                <p className="text-slate-500 max-w-2xl">
-                    Asigna a qué submódulos (Features) tiene acceso cada puesto laboral de tu empresa.
-                    Esto se guarda en la tabla `permissions` y será verificado por el Middleware de Next.js antes de renderizar React.
-                </p>
-                <div className="flex-1"></div>
-                <a 
-                    href="/configurador/usuarios"
-                    className="flex items-center gap-2 bg-white border border-slate-200 text-indigo-600 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                    Gestionar Usuarios (ABC)
-                </a>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6">
+                <div>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Configuración del Centro</h1>
+                    <p className="text-slate-500 mt-1 font-medium">Ajusta los parámetros operativos y de seguridad de tu clínica.</p>
+                </div>
+                
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                    <button 
+                        onClick={() => setActiveTab('clinica')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'clinica' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Clock className="w-4 h-4" /> Operación
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('roles')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'roles' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Shield className="w-4 h-4" /> Accesos y Roles
+                    </button>
+                </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mt-6">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th className="p-4 font-semibold text-slate-700">Puesto Laboral</th>
-                            <th className="p-4 font-semibold text-slate-700">Módulos Permitidos</th>
-                            <th className="p-4 font-semibold text-slate-700 text-right">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {roles.map((rol, i) => (
-                            <tr key={i} className="hover:bg-slate-50">
-                                <td className="p-4 font-medium text-slate-800">{rol.position}</td>
-                                <td className="p-4 text-sm flex gap-2">
-                                    {rol.activeModules.map((m, j) => (
-                                        <span key={j} className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md mb-1 inline-block text-xs font-semibold">
-                                            {m}
-                                        </span>
-                                    ))}
-                                </td>
-                                <td className="p-4 text-right">
-                                    <button className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold transition">
-                                        Editar
+            {activeTab === 'clinica' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Horarios Columna */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8">
+                            <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <Calendar className="w-6 h-6 text-indigo-500" /> Horario Semanal de Apertura
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                {days.map((day) => (
+                                    <div key={day.key} className={`flex flex-col md:flex-row items-center justify-between p-4 rounded-2xl border transition-all ${hours[day.key].active ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50 border-transparent opacity-60'}`}>
+                                        <div className="flex items-center gap-4 w-full md:w-48 mb-4 md:mb-0">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={hours[day.key].active}
+                                                onChange={(e) => setHours({ ...hours, [day.key]: { ...hours[day.key], active: e.target.checked }})}
+                                                className="w-5 h-5 text-indigo-600 rounded-lg border-slate-300 focus:ring-indigo-500" 
+                                            />
+                                            <span className={`font-bold ${hours[day.key].active ? 'text-slate-800' : 'text-slate-400'}`}>{day.label}</span>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4 w-full md:w-auto">
+                                            <div className="flex-1">
+                                                <input 
+                                                    type="time" 
+                                                    disabled={!hours[day.key].active}
+                                                    value={hours[day.key].start}
+                                                    onChange={(e) => setHours({ ...hours, [day.key]: { ...hours[day.key], start: e.target.value }})}
+                                                    className="w-full px-4 py-2 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 disabled:opacity-50"
+                                                />
+                                            </div>
+                                            <span className="text-slate-300 font-bold">a</span>
+                                            <div className="flex-1">
+                                                <input 
+                                                    type="time" 
+                                                    disabled={!hours[day.key].active}
+                                                    value={hours[day.key].end}
+                                                    onChange={(e) => setHours({ ...hours, [day.key]: { ...hours[day.key], end: e.target.value }})}
+                                                    className="w-full px-4 py-2 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 disabled:opacity-50"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Ajustes Rápidos */}
+                    <div className="space-y-6">
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-[2rem] shadow-xl text-white">
+                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                <Clock className="w-6 h-6 text-teal-400" /> Tiempo Médico
+                            </h3>
+                            
+                            <label className="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-widest">Duración por Consulta</label>
+                            <div className="grid grid-cols-3 gap-2 mb-6">
+                                {[15, 20, 30, 45, 60, 90].map((t) => (
+                                    <button 
+                                        key={t}
+                                        onClick={() => setDuration(t)}
+                                        className={`py-3 rounded-xl font-bold transition-all border ${duration === t ? 'bg-teal-500 border-teal-400 text-white shadow-lg shadow-teal-500/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                    >
+                                        {t}'
                                     </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                ))}
+                            </div>
+                            
+                            <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                <p className="text-xs text-slate-400 leading-relaxed font-medium italic">
+                                    * Este tiempo se usará para calcular automáticamente la hora de fin al agendar citas nuevas en la agenda inteligente.
+                                </p>
+                            </div>
+
+                            <button 
+                                onClick={handleSaveSettings}
+                                disabled={saving}
+                                className="w-full mt-8 bg-white text-slate-900 py-4 rounded-2xl font-extrabold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50 shadow-xl"
+                            >
+                                {saving ? 'Guardando...' : <><Save className="w-5 h-5" /> Guardar Todo</>}
+                            </button>
+                        </div>
+                        
+                        <div className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100">
+                             <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2"><Check className="w-5 h-5" /> Configuración Activa</h4>
+                             <p className="text-sm text-indigo-700/80 font-medium">
+                                Tu agenda está configurada para consultas de <strong>{duration} minutos</strong> de 
+                                {days.filter(d => hours[d.key].active).length} días a la semana.
+                             </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="animate-in fade-in duration-300">
+                    <div className="flex items-center gap-4 mb-6">
+                        <p className="text-slate-500 max-w-2xl font-medium leading-relaxed">
+                            Asigna a qué submódulos (Features) tiene acceso cada puesto laboral. Esto define los permisos globales de la plataforma.
+                        </p>
+                        <div className="flex-1"></div>
+                        <a 
+                            href="/configurador/usuarios"
+                            className="flex items-center gap-2 bg-white border border-slate-200 text-indigo-600 px-5 py-2.5 rounded-2xl font-bold hover:bg-slate-50 transition-all shadow-sm group"
+                        >
+                            <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            Gestionar Usuarios
+                        </a>
+                    </div>
+
+                    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-400">
+                                <tr>
+                                    <th className="p-6 pl-8">Puesto Laboral</th>
+                                    <th className="p-6">Módulos Permitidos</th>
+                                    <th className="p-6 pr-8 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {roles.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={3} className="p-16 text-center text-slate-400 font-bold italic">
+                                            No hay roles o puestos configurados aún.
+                                        </td>
+                                    </tr>
+                                ) : roles.map((rol, i) => (
+                                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                        <td className="p-6 pl-8 font-extrabold text-slate-800">{rol.position}</td>
+                                        <td className="p-6 text-sm flex gap-2">
+                                            {rol.activeModules.map((m, j) => (
+                                                <span key={j} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-100">
+                                                    {m}
+                                                </span>
+                                            ))}
+                                        </td>
+                                        <td className="p-6 pr-8 text-right">
+                                            <button className="text-indigo-600 hover:text-indigo-800 font-bold text-sm transition-all hover:underline">
+                                                Editar Permisos
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -50,24 +50,47 @@ export default function PacientesPage() {
         return Math.abs(new Date(diff).getUTCFullYear() - 1970);
     };
 
+    const [confirmModal, setConfirmModal] = useState<{ 
+        isOpen: boolean; 
+        title: string; 
+        message: string; 
+        onConfirm: () => void;
+        type: 'danger' | 'warning';
+        confirmText: string;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        type: 'danger',
+        confirmText: 'Confirmar'
+    });
+
     const handleDelete = async (id: string, name: string) => {
-        if (confirm(`¿Estás seguro de eliminar al paciente ${name}? Esta acción no se puede deshacer.`)) {
-            const { error } = await supabase.from('patients').delete().eq('id', id);
-            if (!error) {
-                fetchPatients();
-            } else {
-                toast.error("Error al eliminar el paciente.");
-                console.error(error);
+        setConfirmModal({
+            isOpen: true,
+            title: '¿Eliminar Paciente?',
+            message: `Estas a punto de eliminar permanentemente el expediente de ${name}. Esta acción no se puede deshacer.`,
+            type: 'danger',
+            confirmText: 'Sí, eliminar',
+            onConfirm: async () => {
+                const { error } = await supabase.from('patients').delete().eq('id', id);
+                if (!error) {
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    fetchPatients();
+                    toast.success("Paciente eliminado correctamente");
+                } else {
+                    toast.error("Error al eliminar el paciente.");
+                }
             }
-        }
+        });
     };
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSave = async (e?: React.FormEvent, force: boolean = false) => {
+        if (e) e.preventDefault();
 
         // 🛑 SISTEMA DE ALERTAS ARMED: CHECK DE DUPLICADOS
-        if (!editId) {
-            // Revisión estricta si el usuario existe (Match nombre OR Fecha nacimiento)
+        if (!editId && !force) {
             const term = `%${formData.first_name}%`;
             let orQuery = `first_name.ilike.${term}`;
             if (formData.date_of_birth !== '') {
@@ -80,10 +103,15 @@ export default function PacientesPage() {
                 .or(orQuery);
 
             if (duplicates && duplicates.length > 0) {
-                const isConfirmed = confirm(
-                    `⚠️ ¡PRECAUCIÓN!\nHemos detectado un posible paciente duplicado con Nombre similar (${duplicates[0].first_name} ${duplicates[0].last_name}) o Fecha de Nacimiento coincidente.\n\n¿Estás seguro de que deseas crear un nuevo expediente?`
-                );
-                if (!isConfirmed) return; // Se aborta la inserción
+                setConfirmModal({
+                    isOpen: true,
+                    title: '¡Paciente Duplicado!',
+                    message: `Hemos detectado un paciente similar (${duplicates[0].first_name} ${duplicates[0].last_name}) o con la misma fecha de nacimiento. ¿Estás seguro de crear un nuevo expediente?`,
+                    type: 'warning',
+                    confirmText: 'Sí, crear nuevo',
+                    onConfirm: () => handleSave(undefined, true)
+                });
+                return;
             }
         }
 
@@ -106,7 +134,6 @@ export default function PacientesPage() {
             }).eq('id', editId);
             error = updateError;
 
-            // Actualizar datos fiscales (upsert por si no existían antes)
             if (formData.business_name || formData.rfc) {
                 await supabase.from('patient_billing').upsert({
                     patient_id: editId,
@@ -136,7 +163,6 @@ export default function PacientesPage() {
             
             error = insertError;
 
-            // Insertar datos fiscales asociados
             if (newPatient && (formData.business_name || formData.rfc)) {
                 await supabase.from('patient_billing').insert({
                     patient_id: newPatient.id,
@@ -151,12 +177,12 @@ export default function PacientesPage() {
         setSaving(false);
         if (!error) {
             setIsModalOpen(false);
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
             setEditId(null);
             setFormData({ first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low', business_name: '', postal_code: '', tax_regime: '' });
             fetchPatients();
         } else {
             toast.error("Hubo un error al guardar el paciente.");
-            console.error(error);
         }
     };
 
@@ -397,6 +423,37 @@ export default function PacientesPage() {
                             </div>
                         </form>
 
+                    </div>
+                </div>
+            )}
+            {/* Modal de Confirmación Premium (Reutilizable) */}
+            {confirmModal.isOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}></div>
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${confirmModal.type === 'danger' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'}`}>
+                                {confirmModal.type === 'danger' ? <Trash2 className="w-10 h-10" /> : <ShieldAlert className="w-10 h-10" />}
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-2">{confirmModal.title}</h3>
+                            <p className="text-slate-500 font-medium leading-relaxed">
+                                {confirmModal.message}
+                            </p>
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
+                            <button 
+                                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                                className="flex-1 px-4 py-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={confirmModal.onConfirm}
+                                className={`flex-1 px-4 py-4 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg ${confirmModal.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+                            >
+                                {confirmModal.confirmText}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

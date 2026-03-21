@@ -125,23 +125,27 @@ export default function UsuariosPage() {
         }
     };
 
-    const handleDelete = async (id: string, email: string) => {
-        if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${email}? Esta acción no se puede deshacer.`)) return;
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string; email: string }>({
+        isOpen: false,
+        userId: '',
+        email: ''
+    });
 
+    const handleDelete = async () => {
+        const { userId } = deleteModal;
         try {
             const response = await fetch('/api/users/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: id }),
+                body: JSON.stringify({ userId }),
             });
 
-            const result = await response.json();
-
             if (response.ok) {
-                toast.success('Usuario eliminado correctamente de la plataforma');
+                toast.success('Usuario eliminado correctamente');
+                setDeleteModal({ isOpen: false, userId: '', email: '' });
                 fetchUsuarios();
             } else {
-                toast.error(result.error || 'Error al eliminar usuario');
+                toast.error('Error al eliminar usuario');
             }
         } catch (err) {
             toast.error('Error de red al intentar eliminar');
@@ -265,7 +269,7 @@ export default function UsuariosPage() {
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(user.id, user.email)}
+                                                    onClick={() => setDeleteModal({ isOpen: true, userId: user.id, email: user.email })}
                                                     className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                                                     title="Eliminar"
                                                 >
@@ -307,7 +311,7 @@ export default function UsuariosPage() {
                                     <input 
                                         type="text" 
                                         required
-                                        value={formData.first_name}
+                                        value={formData.first_name || ""}
                                         onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
                                     />
@@ -317,7 +321,7 @@ export default function UsuariosPage() {
                                     <input 
                                         type="text" 
                                         required
-                                        value={formData.last_name}
+                                        value={formData.last_name || ""}
                                         onChange={(e) => setFormData({...formData, last_name: e.target.value})}
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
                                     />
@@ -332,7 +336,7 @@ export default function UsuariosPage() {
                                     type="email" 
                                     required
                                     disabled={!!editingUser}
-                                    value={formData.email}
+                                    value={formData.email || ""}
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800 disabled:opacity-50"
                                 />
@@ -344,7 +348,7 @@ export default function UsuariosPage() {
                                     <input 
                                         type="password" 
                                         required
-                                        value={formData.password}
+                                        value={formData.password || ""}
                                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
                                     />
@@ -357,7 +361,7 @@ export default function UsuariosPage() {
                                         <Shield className="w-4 h-4 text-slate-400" /> ROL ASIGNADO
                                     </label>
                                     <select 
-                                        value={formData.role}
+                                        value={formData.role || "DOCTOR"}
                                         onChange={(e) => setFormData({...formData, role: e.target.value as UserProfile['role']})}
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
                                     >
@@ -373,7 +377,7 @@ export default function UsuariosPage() {
                                     </label>
                                     <input 
                                         type="text" 
-                                        value={formData.organization_name}
+                                        value={formData.organization_name || ""}
                                         onChange={(e) => setFormData({...formData, organization_name: e.target.value})}
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800 placeholder:text-slate-300"
                                         placeholder="Opcional"
@@ -398,6 +402,37 @@ export default function UsuariosPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Confirmación de Eliminación */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}></div>
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trash2 className="w-10 h-10 text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-2">¿Estás seguro?</h3>
+                            <p className="text-slate-500 font-medium leading-relaxed">
+                                Estas a punto de eliminar a <span className="text-slate-900 font-bold">{deleteModal.email}</span>. Esta acción es irreversible.
+                            </p>
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button 
+                                onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                                className="flex-1 px-4 py-3 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all active:scale-95"
+                            >
+                                No, cancelar
+                            </button>
+                            <button 
+                                onClick={handleDelete}
+                                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
+                            >
+                                Sí, eliminar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
