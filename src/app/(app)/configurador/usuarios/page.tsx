@@ -126,21 +126,25 @@ export default function UsuariosPage() {
     };
 
     const handleDelete = async (id: string, email: string) => {
-        if (!confirm(`¿Estás seguro de que deseas eliminar al usuario ${email}?`)) return;
+        if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${email}? Esta acción no se puede deshacer.`)) return;
 
-        // Eliminamos perfil (Cascade en DB borrará auth.user si está configurado así, 
-        // pero normalmente se requiere admin para borrar auth.user)
-        const { error } = await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', id);
+        try {
+            const response = await fetch('/api/users/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: id }),
+            });
 
-        if (error) {
-            toast.error('Error al eliminar: ' + error.message);
-        } else {
-            toast.success('Usuario eliminado de la tabla de perfiles');
-            // Nota: Para borrar de auth.users se necesita service_role en el backend
-            fetchUsuarios();
+            const result = await response.json();
+
+            if (response.ok) {
+                toast.success('Usuario eliminado correctamente de la plataforma');
+                fetchUsuarios();
+            } else {
+                toast.error(result.error || 'Error al eliminar usuario');
+            }
+        } catch (err) {
+            toast.error('Error de red al intentar eliminar');
         }
     };
 
