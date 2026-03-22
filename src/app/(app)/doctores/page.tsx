@@ -16,17 +16,24 @@ export default function DoctoresPage() {
     const [specialties, setSpecialties] = useState<{ id: string, name: string }[]>([]);
 
     const [formData, setFormData] = useState({
-        first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: ''
+        first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: ''
     });
     const [editId, setEditId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [rooms, setRooms] = useState<any[]>([]);
 
     const supabase = createClient();
 
     useEffect(() => {
         fetchSpecialties();
         fetchDoctors();
+        fetchRooms();
     }, []);
+
+    const fetchRooms = async () => {
+        const { data } = await supabase.from('rooms').select('*').order('name', { ascending: true });
+        if (data) setRooms(data);
+    };
 
     const fetchSpecialties = async () => {
         const { data } = await supabase.from('specialties').select('id, name').order('name', { ascending: true });
@@ -35,7 +42,7 @@ export default function DoctoresPage() {
 
     const fetchDoctors = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('doctors').select('*, specialties(id, name)').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('doctors').select('*, specialties(id, name), rooms(id, name)').order('created_at', { ascending: false });
         if (data) setDoctors(data);
         setLoading(false);
     };
@@ -84,7 +91,8 @@ export default function DoctoresPage() {
                 specialty: specName, // Defensive fallback for old schema
                 license_number: formData.license_number,
                 phone: formData.phone,
-                email: formData.email
+                email: formData.email,
+                default_room_id: formData.default_room_id || null
             }).eq('id', editId);
             error = updateError;
         } else {
@@ -98,7 +106,8 @@ export default function DoctoresPage() {
                 specialty: specName, // Defensive fallback for old schema
                 license_number: formData.license_number,
                 phone: formData.phone,
-                email: formData.email
+                email: formData.email,
+                default_room_id: formData.default_room_id || null
             }]);
             error = insertError;
         }
@@ -107,7 +116,7 @@ export default function DoctoresPage() {
         if (!error) {
             setIsModalOpen(false);
             setEditId(null);
-            setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '' });
+            setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '' });
             fetchDoctors();
         } else {
             setErrorModal({
@@ -134,7 +143,7 @@ export default function DoctoresPage() {
                     <p className="text-slate-500 mt-1 font-medium">Catálogo de especialistas y registros de cédula profesional.</p>
                 </div>
 
-                <button onClick={() => { setEditId(null); setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '' }); setIsModalOpen(true); }} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
+                <button onClick={() => { setEditId(null); setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '' }); setIsModalOpen(true); }} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
                     <Plus className="w-5 h-5" />
                     Nuevo Doctor
                 </button>
@@ -168,7 +177,7 @@ export default function DoctoresPage() {
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-100 text-xs uppercase tracking-wider font-bold text-slate-500">
                                     <th className="p-4 pl-6">Doctor</th>
-                                    <th className="p-4">Especialidad</th>
+                                    <th className="p-4">Especialidad y Consultorio</th>
                                     <th className="p-4">Cédula Prof.</th>
                                     <th className="p-4">Contacto</th>
                                     <th className="p-4 text-center">Estado</th>
@@ -187,7 +196,8 @@ export default function DoctoresPage() {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <span className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md text-xs border border-indigo-100">{doc.specialties?.name || doc.specialty || 'Sin Especialidad'}</span>
+                                            <span className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md text-xs border border-indigo-100 block w-max mb-1">{doc.specialties?.name || doc.specialty || 'Sin Especialidad'}</span>
+                                            {doc.rooms && <span className="font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded-md text-xs border border-teal-100 block w-max">{doc.rooms.name}</span>}
                                         </td>
                                         <td className="p-4 font-bold text-slate-700">{doc.license_number}</td>
                                         <td className="p-4 font-medium text-slate-500 text-sm">
@@ -198,7 +208,7 @@ export default function DoctoresPage() {
                                             <span className="inline-flex items-center justify-center px-2 py-1 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded uppercase">Activo</span>
                                         </td>
                                         <td className="p-4 pr-6 text-right space-x-2">
-                                            <button onClick={(e) => { e.stopPropagation(); setEditId(doc.id); setFormData({ first_name: doc.first_name, last_name: doc.last_name, second_last_name: doc.second_last_name || '', rfc: doc.rfc || '', specialty_id: doc.specialty_id || '', license_number: doc.license_number, phone: doc.phone || '', email: doc.email || '' }); setIsModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block text-slate-600" title="Editar">
+                                            <button onClick={(e) => { e.stopPropagation(); setEditId(doc.id); setFormData({ first_name: doc.first_name, last_name: doc.last_name, second_last_name: doc.second_last_name || '', rfc: doc.rfc || '', specialty_id: doc.specialty_id || '', license_number: doc.license_number, phone: doc.phone || '', email: doc.email || '', default_room_id: doc.default_room_id || '' }); setIsModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block text-slate-600" title="Editar">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button 
@@ -279,8 +289,17 @@ export default function DoctoresPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
+                                            <label className="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
                                         <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-medium text-slate-700" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1">Consultorio Asignado (Base)</label>
+                                        <select value={formData.default_room_id} onChange={e => setFormData({ ...formData, default_room_id: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-medium text-slate-700">
+                                            <option value="">Ninguno (Uso compartido)</option>
+                                            {rooms.map(r => (
+                                                <option key={r.id} value={r.id}>{r.name} {r.specialty ? `(${r.specialty})` : ''}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>

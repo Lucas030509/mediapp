@@ -6,14 +6,15 @@ import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = [
+    { id: 'rooms', title: 'Consultorios y Especialidades', icon: Stethoscope, color: 'blue' },
     { id: 'nurses', title: 'Enfermería y Asistencia', icon: HeartPulse, color: 'rose' },
-    { id: 'hospitals', title: 'Hospitales y Quirófanos', icon: Building2, color: 'blue' },
+    { id: 'hospitals', title: 'Hospitales y Quirófanos', icon: Building2, color: 'indigo' },
     { id: 'insurance_companies', title: 'Aseguradoras', icon: ShieldCheck, color: 'emerald' },
     { id: 'pharmacies', title: 'Farmacias y Laboratorios', icon: Pill, color: 'purple' },
 ];
 
 export default function DirectoriosMaestrosPage() {
-    const [activeTab, setActiveTab] = useState('nurses');
+    const [activeTab, setActiveTab] = useState('rooms');
     const [searchTerm, setSearchTerm] = useState("");
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,6 +96,7 @@ export default function DirectoriosMaestrosPage() {
             setEditId(null);
             // Default empty fields based on tab
             const defaults: any = {
+                rooms: { name: '', specialty: '' },
                 nurses: { first_name: '', last_name: '', phone: '', license_number: '' },
                 hospitals: { name: '', address: '', phone: '', contact_person: '' },
                 insurance_companies: { name: '', contact_phone: '', portal_url: '' },
@@ -111,6 +113,19 @@ export default function DirectoriosMaestrosPage() {
 
     const renderFormFields = () => {
         switch (activeTab) {
+            case 'rooms':
+                return (
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Nombre del Consultorio *</label>
+                            <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Ej. Consultorio 101" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Especialidad Base (Opcional)</label>
+                            <input type="text" value={formData.specialty || ''} onChange={e => setFormData({ ...formData, specialty: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Ej. Pediatría, Medicina General..." />
+                        </div>
+                    </div>
+                );
             case 'nurses':
                 return (
                     <div className="grid grid-cols-2 gap-4">
@@ -284,6 +299,7 @@ export default function DirectoriosMaestrosPage() {
                                             {activeTab === 'nurses' ? `${item.first_name} ${item.last_name}` : item.name}
                                         </td>
                                         <td className="p-4">
+                                            {activeTab === 'rooms' && <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100">{item.specialty || 'Uso General'}</span>}
                                             {activeTab === 'nurses' && <span className="text-xs font-semibold px-2 py-1 bg-rose-50 text-rose-700 rounded-md border border-rose-100">Enfermería / Cédula: {item.license_number || 'N/D'}</span>}
                                             {activeTab === 'pharmacies' && <span className="text-xs font-semibold px-2 py-1 bg-purple-50 text-purple-700 rounded-md border border-purple-100">{item.type}</span>}
                                             {(activeTab === 'hospitals' || activeTab === 'pharmacies') && <p className="text-xs font-medium text-slate-500 mt-1 max-w-[200px] truncate">{item.address || 'Sin dirección'}</p>}

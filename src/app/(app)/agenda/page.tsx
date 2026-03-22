@@ -11,7 +11,9 @@ export default function AgendaPage() {
     const router = useRouter();
 
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<'daily'|'weekly'|'monthly'>('daily');
     const [appointments, setAppointments] = useState<any[]>([]);
+    const [rescheduleModal, setRescheduleModal] = useState({ isOpen: false, id: '', date: '', start_time: '', end_time: '' });
     const [patients, setPatients] = useState<any[]>([]);
     const [doctors, setDoctors] = useState<any[]>([]);
     const [rooms, setRooms] = useState<any[]>([]);
@@ -38,8 +40,8 @@ export default function AgendaPage() {
     }, []);
 
     useEffect(() => {
-        fetchAppointments(currentDate);
-    }, [currentDate]);
+        fetchAppointments(currentDate, viewMode);
+    }, [currentDate, viewMode]);
 
     const fetchClinicConfig = async () => {
         const { data } = await supabase.from('clinic_settings').select('consultation_duration_minutes, business_hours').single();
@@ -49,7 +51,7 @@ export default function AgendaPage() {
     const fetchBaseData = async () => {
         const [{ data: pData }, { data: dData }, { data: rData }] = await Promise.all([
             supabase.from('patients').select('id, first_name, last_name, second_last_name').order('first_name'),
-            supabase.from('doctors').select('id, first_name, last_name, second_last_name').order('first_name'),
+            supabase.from('doctors').select('id, first_name, last_name, second_last_name, default_room_id').order('first_name'),
             supabase.from('rooms').select('id, name').order('name')
         ]);
         if (pData) setPatients(pData);
@@ -57,18 +59,40 @@ export default function AgendaPage() {
         if (rData) setRooms(rData);
     };
 
-    const fetchAppointments = async (date: Date) => {
+    const handleDoctorChange = (docId: string) => {
+        const doc = doctors.find(d => d.id === docId);
+        setFormData(prev => ({
+            ...prev,
+            doctor_id: docId,
+            room_id: doc?.default_room_id || ''
+        }));
+    };
+
+    const fetchAppointments = async (date: Date, mode: string) => {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
-        
-        // 1. Obtener perfil
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id || '').single();
 
-        // 2. Generar fecha local exacta YYYY-MM-DD sin errores de zona horaria
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const dateString = `${year}-${month}-${day}`;
+        const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        let startDate, endDate;
+        if (mode === 'daily') {
+            startDate = ymd(date);
+            endDate = startDate;
+        } else if (mode === 'weekly') {
+            const day = date.getDay(); 
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const s = new Date(date); s.setDate(diff);
+            const e = new Date(s); e.setDate(s.getDate() + 6);
+            startDate = ymd(s);
+            endDate = ymd(e);
+        } else {
+            const s = new Date(year, date.getMonth(), 1);
+            const e = new Date(year, date.getMonth() + 1, 0);
+            startDate = ymd(s);
+            endDate = ymd(e);
+        }
 
         let query = supabase
             .from('appointments')
@@ -78,21 +102,21 @@ export default function AgendaPage() {
                 doctors(first_name, last_name, second_last_name),
                 rooms(name)
             `)
-            .eq('appointment_date', dateString);
+            .gte('appointment_date', startDate)
+            .lte('appointment_date', endDate);
 
         if (profile?.role === 'doctor' && profile.doctor_id) {
             query = query.eq('doctor_id', profile.doctor_id);
         }
 
-        const { data, error } = await query.order('start_time', { ascending: true });
-
+        const { data, error } = await query.order('appointment_date', { ascending: true }).order('start_time', { ascending: true });
         if (data) setAppointments(data);
         setLoading(false);
     };
 
     const updateStatus = async (id: string, newStatus: string) => {
         const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
-        if (!error) fetchAppointments(currentDate);
+        if (!error) fetchAppointments(currentDate, viewMode);
         else toast.error("Error al actualizar estatus: " + error.message);
     };
 
@@ -107,7 +131,7 @@ export default function AgendaPage() {
         if (!error) {
             toast.success("Cita cancelada correctamente");
             setDeleteModal({ isOpen: false, id: '', name: '' });
-            fetchAppointments(currentDate);
+            fetchAppointments(currentDate, viewMode);
         } else {
             toast.error("Error al cancelar cita: " + error.message);
         }
@@ -162,7 +186,7 @@ export default function AgendaPage() {
         if (!error) {
             setIsModalOpen(false);
             setFormData({ ...formData, patient_id: '', start_time: '09:00', end_time: '09:30' });
-            fetchAppointments(currentDate);
+            fetchAppointments(currentDate, viewMode);
             toast.success("Cita agendada correctamente");
         } else {
             toast.error("Error al agendar cita: " + error.message);
@@ -180,15 +204,39 @@ export default function AgendaPage() {
         setFormData({ ...formData, start_time: newStartTime, end_time: `${endH}:${endM}` });
     };
 
+    const handleReschedule = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        const { error } = await supabase.from('appointments').update({
+            appointment_date: rescheduleModal.date,
+            start_time: rescheduleModal.start_time,
+            end_time: rescheduleModal.end_time,
+            status: 'scheduled'
+        }).eq('id', rescheduleModal.id);
+
+        setSaving(false);
+        if (!error) {
+            toast.success("Cita reagendada exitosamente");
+            setRescheduleModal({ isOpen: false, id: '', date: '', start_time: '', end_time: '' });
+            fetchAppointments(currentDate, viewMode);
+        } else {
+            toast.error("Error al reagendar cita: " + error.message);
+        }
+    };
+
     const nextDay = () => {
         const d = new Date(currentDate);
-        d.setDate(d.getDate() + 1);
+        if (viewMode === 'daily') d.setDate(d.getDate() + 1);
+        else if (viewMode === 'weekly') d.setDate(d.getDate() + 7);
+        else d.setMonth(d.getMonth() + 1);
         setCurrentDate(d);
     };
 
     const prevDay = () => {
         const d = new Date(currentDate);
-        d.setDate(d.getDate() - 1);
+        if (viewMode === 'daily') d.setDate(d.getDate() - 1);
+        else if (viewMode === 'weekly') d.setDate(d.getDate() - 7);
+        else d.setMonth(d.getMonth() - 1);
         setCurrentDate(d);
     };
 
@@ -229,12 +277,31 @@ export default function AgendaPage() {
 
         setFormData(prev => ({
             ...prev,
-            appointment_date: dateString,
+            appointment_date: viewMode === 'daily' ? currentDate.toISOString().split('T')[0] : dateString,
             start_time: formatTimeStr(startTimeDate),
             end_time: formatTimeStr(endTimeDate)
         }));
         setIsModalOpen(true);
     };
+
+    const getRangeLabel = () => {
+        if (viewMode === 'daily') return currentDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+        if (viewMode === 'weekly') {
+            const day = currentDate.getDay(); 
+            const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1);
+            const s = new Date(currentDate); s.setDate(diff);
+            const e = new Date(s); e.setDate(s.getDate() + 6);
+            return `${s.toLocaleDateString('es-ES', {day:'numeric', month:'short'})} - ${e.toLocaleDateString('es-ES', {day:'numeric', month:'short'})}`;
+        }
+        return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    };
+
+    // Agrupamos citas por fecha
+    const groupedAppointments = appointments.reduce((acc: any, curr: any) => {
+        if (!acc[curr.appointment_date]) acc[curr.appointment_date] = [];
+        acc[curr.appointment_date].push(curr);
+        return acc;
+    }, {});
 
     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' } as const;
 
@@ -253,12 +320,21 @@ export default function AgendaPage() {
                     <p className="text-slate-500 mt-1 font-medium">Sincronización en tiempo real de citas y procedimientos.</p>
                 </div>
 
-                <div className="flex bg-white rounded-xl shadow-sm border border-slate-100 p-1">
-                    <button onClick={prevDay} className="px-4 py-2 hover:bg-slate-50 rounded-lg text-slate-600 font-semibold transition"><ChevronLeft className="w-5 h-5" /></button>
-                    <div className="px-4 py-2 text-slate-800 font-extrabold flex items-center capitalize w-48 justify-center">
-                        {currentDate.toLocaleDateString('es-ES', options)}
+                <div className="flex items-center gap-4">
+                    {/* Botonera Vistas */}
+                    <div className="flex bg-slate-100 rounded-xl p-1 shadow-inner border border-slate-200">
+                        <button onClick={() => setViewMode('daily')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewMode === 'daily' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:bg-slate-200'}`}>Día</button>
+                        <button onClick={() => setViewMode('weekly')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewMode === 'weekly' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:bg-slate-200'}`}>Semana</button>
+                        <button onClick={() => setViewMode('monthly')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewMode === 'monthly' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:bg-slate-200'}`}>Mes</button>
                     </div>
-                    <button onClick={nextDay} className="px-4 py-2 hover:bg-slate-50 rounded-lg text-slate-600 font-semibold transition"><ChevronRight className="w-5 h-5" /></button>
+
+                    <div className="flex bg-white rounded-xl shadow-sm border border-slate-100 p-1">
+                        <button onClick={prevDay} className="px-4 py-2 hover:bg-slate-50 rounded-lg text-slate-600 font-semibold transition"><ChevronLeft className="w-5 h-5" /></button>
+                        <div className="px-4 py-2 text-slate-800 font-extrabold flex items-center capitalize w-auto min-w-[120px] justify-center text-center">
+                            {getRangeLabel()}
+                        </div>
+                        <button onClick={nextDay} className="px-4 py-2 hover:bg-slate-50 rounded-lg text-slate-600 font-semibold transition"><ChevronRight className="w-5 h-5" /></button>
+                    </div>
                 </div>
             </div>
 
@@ -322,75 +398,105 @@ export default function AgendaPage() {
                                 <p className="text-sm font-normal text-slate-400 mt-2">Haz clic en &quot;Agendar Cita&quot; para empezar.</p>
                             </div>
                         ) : (
-                            <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-8">
-                                {appointments.map(cita => (
-                                    <div key={cita.id} className={`relative flex items-start group ${cita.status === 'blocked' ? 'opacity-60' : ''}`}>
-                                        <div className={`absolute -left-[29px] w-[14px] h-[14px] rounded-full border-4 border-white ${cita.status === 'completed' ? 'bg-slate-300' : cita.status === 'in-progress' ? 'bg-teal-500 animate-pulse' : 'bg-slate-200'}`}></div>
+                            <div className="space-y-12">
+                                {Object.keys(groupedAppointments).sort().map(dateString => (
+                                    <div key={dateString} className="mb-4">
+                                        {viewMode !== 'daily' && (
+                                            <h3 className="font-extrabold text-slate-800 text-lg border-b-2 border-slate-100 pb-2 mb-6 capitalize text-indigo-900">
+                                                {new Date(dateString + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                            </h3>
+                                        )}
+                                        <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
+                                            {groupedAppointments[dateString].map((cita:any) => (
+                                                <div key={cita.id} className={`relative flex items-start group ${cita.status === 'blocked' ? 'opacity-60' : ''}`}>
+                                                    <div className={`absolute -left-[29px] w-[14px] h-[14px] rounded-full border-4 border-white ${cita.status === 'completed' ? 'bg-slate-300' : cita.status === 'in-progress' ? 'bg-teal-500 animate-pulse' : 'bg-slate-200'}`}></div>
 
-                                        <div className="w-24 flex-shrink-0 pt-0.5">
-                                            <span className={`font-extrabold text-sm ${cita.status === 'completed' ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-700'}`}>
-                                                {formatTime(cita.start_time)}
-                                            </span>
-                                            <span className="block text-xs font-semibold text-slate-400 mt-1 flex items-center gap-1">
-                                                <Clock className="w-3 h-3" /> {formatTime(cita.end_time)}
-                                            </span>
-                                        </div>
-
-                                        <div className={`flex-1 min-h-[4rem] rounded-xl p-4 border transition-all hover:shadow-md ${cita.status === 'in-progress' ? 'bg-white border-teal-200 shadow-lg shadow-teal-500/10 scale-[1.02]' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h4 className={`text-base font-bold ${cita.status === 'blocked' ? 'text-slate-500' : 'text-slate-800'}`}>
-                                                        {cita.patients ? `${cita.patients.first_name} ${cita.patients.last_name} ${cita.patients.second_last_name || ''}` : 'Paciente Eliminado'}
-                                                    </h4>
-                                                    <div className="flex flex-wrap gap-2 items-center mt-2.5">
-                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${getTypeColor(cita.type, cita.status)}`}>{cita.type}</span>
-                                                        {cita.rooms && (
-                                                            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                                                                {cita.is_video ? <Video className="w-3 h-3 text-purple-500" /> : <MapPin className="w-3 h-3 text-slate-400" />} {cita.rooms?.name}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                                                            <Stethoscope className="w-3 h-3" /> Dr. {cita.doctors?.last_name}
+                                                    <div className="w-24 flex-shrink-0 pt-0.5">
+                                                        <span className={`font-extrabold text-sm ${cita.status === 'completed' ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-700'}`}>
+                                                            {formatTime(cita.start_time)}
+                                                        </span>
+                                                        <span className="block text-xs font-semibold text-slate-400 mt-1 flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" /> {formatTime(cita.end_time)}
                                                         </span>
                                                     </div>
-                                                </div>
 
-                                                <div className="flex flex-col items-end justify-between gap-2 border-l border-slate-100 pl-4">
-                                                    <div className="flex items-center gap-2">
-                                                        {cita.status === 'scheduled' && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    updateStatus(cita.id, 'in-progress');
-                                                                    router.push(`/consulta/${cita.id}`);
-                                                                }} 
-                                                                className="text-[10px] font-bold bg-indigo-600 text-white hover:bg-slate-900 px-3 py-1.5 rounded-xl transition shadow-lg shadow-indigo-500/20 border border-indigo-100 flex items-center gap-1 active:scale-95"
-                                                            >
-                                                                <Play className="w-3 h-3" /> Atender
-                                                            </button>
-                                                        )}
-                                                        {cita.status === 'in-progress' && (
-                                                            <button onClick={() => updateStatus(cita.id, 'completed')} className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1.5 rounded transition shadow-sm">Completar</button>
-                                                        )}
-                                                        <button 
-                                                            onClick={() => setDeleteModal({ 
-                                                                isOpen: true, 
-                                                                id: cita.id, 
-                                                                name: cita.patients ? `${cita.patients.first_name} ${cita.patients.last_name}` : 'esta cita' 
-                                                            })} 
-                                                            className="p-1 px-1.5 hover:bg-red-50 text-red-400 hover:text-red-500 rounded transition" 
-                                                            title="Cancelar Cita"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
+                                                    <div className={`flex-1 min-h-[4rem] rounded-xl p-4 border transition-all hover:shadow-md ${cita.status === 'in-progress' ? 'bg-white border-teal-200 shadow-lg shadow-teal-500/10 scale-[1.02]' : cita.status === 'no-show' ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <h4 className={`text-base font-bold ${cita.status === 'blocked' || cita.status === 'no-show' ? 'text-slate-500' : 'text-slate-800'}`}>
+                                                                    {cita.patients ? `${cita.patients.first_name} ${cita.patients.last_name} ${cita.patients.second_last_name || ''}` : 'Paciente Eliminado'}
+                                                                </h4>
+                                                                <div className="flex flex-wrap gap-2 items-center mt-2.5">
+                                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${getTypeColor(cita.type, cita.status)}`}>{cita.type}</span>
+                                                                    {cita.rooms && (
+                                                                        <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                                                                            {cita.is_video ? <Video className="w-3 h-3 text-purple-500" /> : <MapPin className="w-3 h-3 text-slate-400" />} {cita.rooms?.name}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                                                                        <Stethoscope className="w-3 h-3" /> Dr. {cita.doctors?.last_name}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
 
-                                                    <div>
-                                                        {cita.status === 'completed' && <div className="flex items-center gap-1 text-emerald-500 text-xs font-bold"><CheckCircle2 className="w-4 h-4" /> Finalizada</div>}
-                                                        {cita.status === 'in-progress' && <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-1 rounded animate-pulse shadow-[0_0_10px_rgba(20,184,166,0.2)]">En Consulta</span>}
-                                                        {cita.status === 'scheduled' && <span className="bg-amber-50 border border-amber-100 text-amber-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Agendada</span>}
+                                                            <div className="flex flex-col items-end justify-between gap-2 border-l border-slate-100 pl-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    {cita.status === 'scheduled' && (
+                                                                        <>
+                                                                            <button 
+                                                                                onClick={() => setRescheduleModal({ isOpen: true, id: cita.id, date: cita.appointment_date, start_time: cita.start_time, end_time: cita.end_time })} 
+                                                                                className="text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-2 py-1.5 rounded transition shadow-sm active:scale-95 flex items-center gap-1"
+                                                                            >
+                                                                                <CalendarIcon className="w-3 h-3"/> Reagendar
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => updateStatus(cita.id, 'no-show')} 
+                                                                                className="text-[10px] font-bold bg-slate-500 hover:bg-slate-600 text-white px-2 py-1.5 rounded transition shadow-sm active:scale-95"
+                                                                            >
+                                                                                No Asistió
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => {
+                                                                                    updateStatus(cita.id, 'in-progress');
+                                                                                    router.push(`/consulta/${cita.id}`);
+                                                                                }} 
+                                                                                className="text-[10px] font-bold bg-indigo-600 text-white hover:bg-slate-900 px-3 py-1.5 rounded-xl transition shadow-lg shadow-indigo-500/20 border border-indigo-100 flex items-center gap-1 active:scale-95"
+                                                                            >
+                                                                                <Play className="w-3 h-3" /> Atender
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    
+                                                                    {cita.status === 'in-progress' && (
+                                                                        <button onClick={() => updateStatus(cita.id, 'completed')} className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1.5 rounded transition shadow-sm">Completar</button>
+                                                                    )}
+                                                                    
+                                                                    {(cita.status === 'no-show' || cita.status === 'scheduled') && (
+                                                                        <button 
+                                                                            onClick={() => setDeleteModal({ 
+                                                                                isOpen: true, 
+                                                                                id: cita.id, 
+                                                                                name: cita.patients ? `${cita.patients.first_name} ${cita.patients.last_name}` : 'esta cita' 
+                                                                            })} 
+                                                                            className="p-1 px-1.5 hover:bg-red-50 text-red-400 hover:text-red-500 rounded transition" 
+                                                                            title="Cancelar Cita"
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                <div>
+                                                                    {cita.status === 'completed' && <div className="flex items-center gap-1 text-emerald-500 text-xs font-bold"><CheckCircle2 className="w-4 h-4" /> Finalizada</div>}
+                                                                    {cita.status === 'in-progress' && <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-1 rounded animate-pulse shadow-[0_0_10px_rgba(20,184,166,0.2)]">En Consulta</span>}
+                                                                    {cita.status === 'scheduled' && <span className="bg-amber-50 border border-amber-100 text-amber-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Agendada</span>}
+                                                                    {cita.status === 'no-show' && <div className="flex items-center gap-1 text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded"><AlertCircle className="w-3 h-3" /> No se presentó</div>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ))}
@@ -425,7 +531,7 @@ export default function AgendaPage() {
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 mb-1">Médico Tratante *</label>
-                                        <select required value={formData.doctor_id} onChange={e => setFormData({ ...formData, doctor_id: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700">
+                                        <select required value={formData.doctor_id} onChange={e => handleDoctorChange(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700">
                                             <option value="" disabled>Selecciona un médico</option>
                                             {doctors.map(d => <option key={d.id} value={d.id}>{"Dr. " + d.first_name + " " + d.last_name}</option>)}
                                         </select>
@@ -518,6 +624,47 @@ export default function AgendaPage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para Mover/Reagendar Cita */}
+            {rescheduleModal.isOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in p-4" onClick={(e) => { if (e.target === e.currentTarget) setRescheduleModal({...rescheduleModal, isOpen: false}) }}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-amber-50">
+                            <h3 className="text-xl font-bold text-amber-800 flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-amber-600" /> Reagendar Cita</h3>
+                            <button onClick={() => setRescheduleModal({...rescheduleModal, isOpen: false})} className="text-amber-400 hover:text-amber-600 p-1"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <form onSubmit={handleReschedule} className="p-6 space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-1">Nueva Fecha</label>
+                                <input required type="date" value={rescheduleModal.date} onChange={e => setRescheduleModal({ ...rescheduleModal, date: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition font-bold text-slate-700" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 mb-1">Hora Inicio</label>
+                                    <input required type="time" value={rescheduleModal.start_time} onChange={e => {
+                                        const [h, m] = e.target.value.split(':').map(Number);
+                                        const d = new Date(); d.setHours(h, m + config.duration, 0);
+                                        setRescheduleModal({ ...rescheduleModal, start_time: e.target.value, end_time: `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}` });
+                                    }} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 transition font-bold text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 mb-1">Hora Fin</label>
+                                    <input required type="time" value={rescheduleModal.end_time} onChange={e => setRescheduleModal({ ...rescheduleModal, end_time: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 transition font-bold text-slate-700" />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex gap-3 justify-end border-t border-slate-100 mt-8">
+                                <button type="button" onClick={() => setRescheduleModal({...rescheduleModal, isOpen: false})} className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition">Cancelar</button>
+                                <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 transition shadow-md disabled:opacity-50">
+                                    {saving ? 'Guardando...' : 'Reagendar Ahora'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

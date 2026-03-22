@@ -29,6 +29,11 @@ export default function ConsultaPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Modals Control
+    const [isCie10Open, setIsCie10Open] = useState(false);
+    const [cieSearch, setCieSearch] = useState('');
+    const [isRxOpen, setIsRxOpen] = useState(false);
+
     useEffect(() => {
         if (appointmentId) fetchInitialData();
     }, [appointmentId]);
@@ -121,6 +126,38 @@ export default function ConsultaPage() {
     </div>;
     
     if (!appointment) return <div className="h-screen flex items-center justify-center text-red-500 font-bold">Error: No se encontró la cita médica.</div>;
+
+    const MOCK_CIE10 = [
+        { code: 'J00', desc: 'Rinofaringitis aguda [resfriado común]' },
+        { code: 'J01.9', desc: 'Sinusitis aguda, no especificada' },
+        { code: 'J02.9', desc: 'Faringitis aguda, no especificada' },
+        { code: 'J03.9', desc: 'Amigdalitis aguda, no especificada' },
+        { code: 'J06.9', desc: 'Infección aguda de las vías respiratorias superiores, no especificada' },
+        { code: 'I10', desc: 'Hipertensión esencial (primaria)' },
+        { code: 'E11.9', desc: 'Diabetes mellitus tipo 2 sin complicaciones' },
+        { code: 'E78.5', desc: 'Hiperlipidemia no especificada' },
+        { code: 'E03.9', desc: 'Hipotiroidismo, no especificado' },
+        { code: 'K21.9', desc: 'Enfermedad del reflujo gastroesofágico sin esofagitis' },
+        { code: 'J45.9', desc: 'Asma, no especificada' },
+        { code: 'M54.5', desc: 'Lumbago no especificado' },
+        { code: 'K30', desc: 'Dispepsia' },
+        { code: 'N39.0', desc: 'Infección de vías urinarias, sitio no especificado' },
+        { code: 'A09.9', desc: 'Gastroenteritis y colitis de origen no especificado' },
+        { code: 'F41.1', desc: 'Trastorno de ansiedad generalizada' },
+        { code: 'R51', desc: 'Cefalea' },
+        { code: 'D50.9', desc: 'Anemia por deficiencia de hierro sin otra especificación' },
+        { code: 'H10.9', desc: 'Conjuntivitis, no especificada' },
+        { code: 'L20.9', desc: 'Dermatitis atópica, no especificada' }
+    ];
+
+    const filteredCie10 = cieSearch ? MOCK_CIE10.filter(c => c.desc.toLowerCase().includes(cieSearch.toLowerCase()) || c.code.toLowerCase().includes(cieSearch.toLowerCase())) : MOCK_CIE10;
+
+    const selectCie10 = (code: string, desc: string) => {
+        const text = note.assessment ? `${note.assessment}\n[${code}] ${desc}` : `[${code}] ${desc}`;
+        setNote({ ...note, assessment: text });
+        setIsCie10Open(false);
+        toast.success("Diagnóstico agregado al análisis clínico");
+    };
 
     return (
         <div className="flex flex-col h-screen bg-white animate-in fade-in duration-500">
@@ -236,7 +273,7 @@ export default function ConsultaPage() {
                                     <div className="w-1.5 h-8 bg-slate-900 rounded-full"></div>
                                     <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Análisis Clínico</h3>
                                 </div>
-                                <button className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-95">
+                                <button onClick={() => setIsCie10Open(true)} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-95">
                                     <Plus className="w-4 h-4" /> BUSCAR CIE-10
                                 </button>
                             </div>
@@ -255,7 +292,7 @@ export default function ConsultaPage() {
                                     <div className="w-1.5 h-8 bg-purple-600 rounded-full"></div>
                                     <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Plan de Tratamiento</h3>
                                 </div>
-                                <button className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all shadow-lg shadow-purple-500/20 active:scale-95">
+                                <button onClick={() => setIsRxOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all shadow-lg shadow-purple-500/20 active:scale-95">
                                     <Pill className="w-4 h-4" /> GENERAR RECETA
                                 </button>
                             </div>
@@ -289,6 +326,173 @@ export default function ConsultaPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal CIE-10 */}
+            {isCie10Open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsCie10Open(false)}></div>
+                    <div className="bg-white rounded-3xl shadow-2xl relative z-10 w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50">
+                            <h3 className="text-xl font-black text-slate-800 flex-1">Catálogo CIE-10</h3>
+                            <button onClick={() => setIsCie10Open(false)} className="w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all font-bold">X</button>
+                        </div>
+                        <div className="p-6 bg-white space-y-4">
+                            <input 
+                                type="text" 
+                                autoFocus
+                                placeholder="Escribe un diagnóstico (ej. Asma, Diabetes...)" 
+                                value={cieSearch}
+                                onChange={e => setCieSearch(e.target.value)}
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-teal-500/10 focus:border-teal-400 transition-all"
+                            />
+                            <div className="max-h-80 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {filteredCie10.map((c, i) => (
+                                    <button 
+                                        key={i} 
+                                        onClick={() => selectCie10(c.code, c.desc)}
+                                        className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50 hover:shadow-md hover:shadow-teal-500/5 transition-all group flex items-start gap-4"
+                                    >
+                                        <span className="bg-slate-100 text-slate-600 group-hover:bg-teal-500 group-hover:text-white px-2 py-1 rounded font-black text-xs transition-colors">{c.code}</span>
+                                        <span className="font-bold text-slate-700 text-sm">{c.desc}</span>
+                                    </button>
+                                ))}
+                                {filteredCie10.length === 0 && (
+                                    <div className="p-8 text-center text-slate-400 font-bold">No se encontraron resultados para "{cieSearch}"</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal RECETA (Impresión) */}
+            {isRxOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setIsRxOpen(false)}></div>
+                    <div className="bg-white rounded-[2rem] shadow-2xl relative z-10 w-full max-w-3xl h-full max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8">
+                        
+                        {/* Print Only Styles */}
+                        <style dangerouslySetInnerHTML={{__html: `
+                            @media print {
+                                body * { visibility: hidden; }
+                                #printable-rx, #printable-rx * { visibility: visible; }
+                                #printable-rx { position: absolute; left: 0; top: 0; width: 100%; padding: 40px; margin: 0; border: none; box-shadow: none; border-radius: 0; transform: none; max-height: max-content; }
+                                @page { size: portrait; margin: 0; }
+                            }
+                        `}} />
+
+                        {/* Modal Header (No printable) */}
+                        <div className="bg-purple-600 p-6 flex items-center justify-between text-white shrink-0 print:hidden">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                                    <Pill className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black">Previsualización de Receta</h2>
+                                    <p className="text-purple-200 font-bold text-xs uppercase tracking-widest mt-0.5">Listo para imprimir</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => window.print()} className="bg-white text-purple-900 hover:bg-purple-50 px-6 py-2.5 rounded-xl font-black transition-colors shadow-lg flex items-center gap-2">
+                                    Imprimir PDF
+                                </button>
+                                <button onClick={() => setIsRxOpen(false)} className="w-10 h-10 bg-black/20 hover:bg-black/30 text-white rounded-xl flex items-center justify-center transition-all">
+                                    X
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Contenido Imprimible */}
+                        <div id="printable-rx" className="flex-1 bg-white overflow-y-auto custom-scrollbar p-10 sm:p-14 text-black">
+                            {/* Cabecera Médico */}
+                            <div className="border-b-4 border-slate-900 pb-6 mb-6">
+                                <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">DR. {appointment.doctors?.first_name} {appointment.doctors?.last_name} {appointment.doctors?.second_last_name || ''}</h1>
+                                <h2 className="text-xl font-bold text-slate-600 mt-1 uppercase tracking-widest">{appointment.doctors?.specialties?.name || appointment.doctors?.specialty || 'Especialista'}</h2>
+                                <p className="text-sm font-bold text-slate-500 mt-2">Cédula Profesional: {appointment.doctors?.license_number || 'En Trámite'}</p>
+                            </div>
+
+                            {/* Datos Paciente y Vitales */}
+                            <div className="grid grid-cols-[1fr_200px] gap-8 mb-8">
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                                        <div className="grid grid-cols-2 gap-y-4 text-sm">
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase text-slate-400">Paciente</span>
+                                                <span className="font-bold text-slate-800 text-lg">{patient.first_name} {patient.last_name}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase text-slate-400">Fecha de Consulta</span>
+                                                <span className="font-bold text-slate-800">{new Date(appointment.appointment_date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase text-slate-400">Edad Aprox.</span>
+                                                <span className="font-bold text-slate-800">{patient.date_of_birth ? (new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear()) + ' años' : 'N/D'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase text-slate-400">Género</span>
+                                                <span className="font-bold text-slate-800">{patient.gender === 'F' ? 'Femenino' : patient.gender === 'M' ? 'Masculino' : patient.gender === 'O' ? 'Otro' : 'No Especificado'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase text-slate-400">Alergias</span>
+                                                <span className="font-bold text-red-600 uppercase">Sin reporte</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Indicaciones (Plan) */}
+                                    <div className="pt-6">
+                                        <h3 className="text-slate-900 font-extrabold text-2xl mb-6">Rx.</h3>
+                                        <div className="whitespace-pre-wrap font-medium text-slate-800 text-lg leading-relaxed">
+                                            {note.plan || 'No se han registrado indicaciones en el plan de tratamiento de la nota clínica.'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Sidebar Signos Vitales */}
+                                <div className="border-l-2 border-slate-100 pl-6">
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Signos Vitales</h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Temp</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.temperature_c || '--'} °C</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">TA</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.blood_pressure || '--'} </span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">FC</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.heart_rate || '--'} lpm</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Sat O2</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.oxygen_saturation || '--'} %</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Peso</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.weight_kg || '--'} kg</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Talla</span>
+                                            <span className="font-bold text-slate-800">{vitalSigns.height_cm || '--'} cm</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Firma */}
+                            <div className="mt-20 flex justify-center">
+                                <div className="text-center w-64">
+                                    <div className="border-b-2 border-slate-400 mb-2 h-16"></div>
+                                    <p className="font-bold text-slate-800">Firma del Médico</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }

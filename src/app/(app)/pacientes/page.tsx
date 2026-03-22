@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreVertical, FileText, Calendar, ShieldAlert, X, Users, Trash2, Edit2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Filter, MoreVertical, FileText, Calendar, ShieldAlert, X, Users, Trash2, Edit2, Camera, CameraOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
@@ -10,17 +10,61 @@ export default function PacientesPage() {
     const [patients, setPatients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low',
+        gender: '', photo_url: '',
         // Fiscal Data (ARMED)
         business_name: '', postal_code: '', tax_regime: ''
     });
     const [editId, setEditId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
+    // Camera State
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+
     const supabase = createClient();
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setMediaStream(stream);
+            setIsCameraOpen(true);
+        } catch (err) {
+            toast.error("No se pudo acceder a la cámara: " + err);
+        }
+    };
+
+    useEffect(() => {
+        if (isCameraOpen && videoRef.current && mediaStream) {
+            videoRef.current.srcObject = mediaStream;
+        }
+    }, [isCameraOpen, mediaStream]);
+
+    const stopCamera = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+        }
+        setIsCameraOpen(false);
+        setMediaStream(null);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            if (context) {
+                canvasRef.current.width = videoRef.current.videoWidth;
+                canvasRef.current.height = videoRef.current.videoHeight;
+                context.drawImage(videoRef.current, 0, 0);
+                const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.8);
+                setFormData(prev => ({ ...prev, photo_url: dataUrl }));
+                stopCamera();
+            }
+        }
+    };
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -131,6 +175,8 @@ export default function PacientesPage() {
                 blood_type: formData.blood_type,
                 main_condition: formData.main_condition,
                 status: formData.risk,
+                gender: formData.gender === '' ? null : formData.gender,
+                photo_url: formData.photo_url,
             }).eq('id', editId);
             error = updateError;
 
@@ -158,6 +204,8 @@ export default function PacientesPage() {
                     blood_type: formData.blood_type,
                     main_condition: formData.main_condition,
                     status: formData.risk,
+                    gender: formData.gender === '' ? null : formData.gender,
+                    photo_url: formData.photo_url,
                 }
             ]).select().single();
             
@@ -179,10 +227,11 @@ export default function PacientesPage() {
             setIsModalOpen(false);
             setConfirmModal(prev => ({ ...prev, isOpen: false }));
             setEditId(null);
-            setFormData({ first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low', business_name: '', postal_code: '', tax_regime: '' });
+            setFormData({ first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low', gender: '', photo_url: '', business_name: '', postal_code: '', tax_regime: '' });
             fetchPatients();
         } else {
-            toast.error("Hubo un error al guardar el paciente.");
+            console.error("Error saving patient:", error);
+            toast.error("Error al guardar: " + (error?.message || "Desconocido"));
         }
     };
 
@@ -197,7 +246,7 @@ export default function PacientesPage() {
                     <p className="text-slate-500 mt-1 font-medium">Administra el expediente clínico y demográficos (EHR Core).</p>
                 </div>
 
-                <button onClick={() => { setEditId(null); setFormData({ first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low', business_name: '', postal_code: '', tax_regime: '' }); setIsModalOpen(true); }} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
+                <button onClick={() => { setEditId(null); setFormData({ first_name: '', last_name: '', second_last_name: '', alias: '', rfc: '', email: '', phone: '', date_of_birth: '', blood_type: '', main_condition: '', risk: 'low', gender: '', photo_url: '', business_name: '', postal_code: '', tax_regime: '' }); setIsModalOpen(true); }} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
                     <Plus className="w-5 h-5" />
                     Alta de Paciente
                 </button>
@@ -251,9 +300,13 @@ export default function PacientesPage() {
                                     <tr key={patient.id} className="hover:bg-slate-50/70 transition group cursor-pointer">
                                         <td className="p-4 pl-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-teal-50 border border-teal-100 flex items-center justify-center font-bold text-teal-700 tracking-tighter uppercase">
-                                                    {patient.first_name[0]}{patient.last_name?.[0] || ''}
-                                                </div>
+                                                {patient.photo_url ? (
+                                                    <img src={patient.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-teal-50 border border-teal-100 flex items-center justify-center font-bold text-teal-700 tracking-tighter uppercase whitespace-nowrap">
+                                                        {patient.first_name[0]}{patient.last_name?.[0] || ''}
+                                                    </div>
+                                                )}
                                                 <div className="font-bold text-slate-800">
                                                     {patient.first_name} {patient.last_name} {patient.second_last_name || ''}
                                                     {patient.alias && <span className="block text-xs font-semibold text-slate-500 mt-0.5 italic">"{patient.alias}"</span>}
@@ -287,7 +340,7 @@ export default function PacientesPage() {
                                                 const { data: billData } = await supabase.from('patient_billing').select('*').eq('patient_id', patient.id).single();
                                                 
                                                 setFormData({ 
-                                                    first_name: patient.first_name, last_name: patient.last_name, second_last_name: patient.second_last_name || '', alias: patient.alias || '', rfc: patient.rfc || '', email: patient.email || '', phone: patient.phone || '', date_of_birth: patient.date_of_birth || '', blood_type: patient.blood_type || '', main_condition: patient.main_condition || '', risk: patient.status || 'low',
+                                                    first_name: patient.first_name, last_name: patient.last_name, second_last_name: patient.second_last_name || '', alias: patient.alias || '', rfc: patient.rfc || '', email: patient.email || '', phone: patient.phone || '', date_of_birth: patient.date_of_birth || '', blood_type: patient.blood_type || '', main_condition: patient.main_condition || '', risk: patient.status || 'low', gender: patient.gender || '', photo_url: patient.photo_url || '',
                                                     business_name: billData?.business_name || '',
                                                     postal_code: billData?.postal_code || '',
                                                     tax_regime: billData?.tax_regime || ''
@@ -310,119 +363,181 @@ export default function PacientesPage() {
 
             {/* Modal for New Patient */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false) }}>
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in slide-in-from-bottom-4">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Plus className="w-5 h-5 text-teal-600" /> {editId ? 'Editar Paciente' : 'Alta de Nuevo Paciente'}</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1"><X className="w-5 h-5" /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in p-4 sm:p-6" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false) }}>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl flex flex-col max-h-[95vh] overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* HEADER */}
+                        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                            <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                                {editId ? 'Editar Información del Paciente' : 'Alta de Nuevo Paciente'}
+                            </h3>
+                            <button onClick={() => { stopCamera(); setIsModalOpen(false); }} className="text-slate-400 hover:bg-slate-200 hover:text-slate-700 p-2 rounded-full transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSave} className="p-6">
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {/* Sección 1: Datos Personales */}
-                                <div className="space-y-4">
-                                    <h4 className="font-bold text-xs uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Información Básica</h4>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-600 mb-1">Nombre(s) *</label>
-                                        <input required type="text" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Apellido Paterno *</label>
-                                            <input required type="text" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Apellido Materno</label>
-                                            <input type="text" value={formData.second_last_name} onChange={e => setFormData({ ...formData, second_last_name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Fecha Nacimiento</label>
-                                            <input type="date" value={formData.date_of_birth} onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700 text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Tipo Sanguíneo</label>
-                                            <select value={formData.blood_type} onChange={e => setFormData({ ...formData, blood_type: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700 text-sm">
-                                                <option value="">Selecciona</option>
-                                                <option value="A+">A+</option><option value="A-">A-</option>
-                                                <option value="B+">B+</option><option value="B-">B-</option>
-                                                <option value="O+">O+</option><option value="O-">O-</option>
-                                                <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Nombre Descriptivo / Alias</label>
-                                            <input type="text" value={formData.alias} onChange={e => setFormData({ ...formData, alias: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700 text-sm" placeholder="Ej. El de telcel, familiar de Dr..." />
-                                        </div>
+                        {/* BODY */}
+                        <form onSubmit={handleSave} className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                            <div className="flex flex-col md:flex-row gap-10">
+                                
+                                {/* COLUMNA IZQUIERDA: WEBCAM / FOTO */}
+                                <div className="w-full md:w-64 shrink-0 space-y-4">
+                                    <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-3 flex items-center gap-2 drop-shadow-sm">Fotografía</h4>
+                                    
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl h-[280px] w-full flex flex-col items-center justify-center overflow-hidden relative group transition-all">
+                                        {isCameraOpen ? (
+                                            <>
+                                                <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover scale-[1.02]" />
+                                                <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2 px-4 z-10 animate-in slide-in-from-bottom-2">
+                                                    <button type="button" onClick={capturePhoto} className="flex-1 py-3 bg-teal-500 text-white text-xs font-black rounded-xl shadow-lg hover:bg-teal-600 hover:scale-105 transition-all">Capturar</button>
+                                                    <button type="button" onClick={stopCamera} className="w-12 bg-slate-900 text-white flex items-center justify-center rounded-xl shadow-lg hover:bg-slate-800 transition-all"><X className="w-4 h-4"/></button>
+                                                </div>
+                                            </>
+                                        ) : formData.photo_url ? (
+                                            <>
+                                                <img src={formData.photo_url} alt="Paciente" className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                                                    <button type="button" onClick={startCamera} className="w-12 h-12 bg-white text-slate-900 rounded-full hover:bg-slate-100 hover:scale-110 flex items-center justify-center transition-all shadow-xl">
+                                                        <Camera className="w-5 h-5"/>
+                                                    </button>
+                                                    <button type="button" onClick={() => setFormData({...formData, photo_url: ''})} className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all shadow-xl">
+                                                        <Trash2 className="w-4 h-4"/>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center p-6 flex flex-col items-center justify-center h-full w-full">
+                                                <div className="w-20 h-20 bg-white border border-slate-100 shadow-sm rounded-full flex items-center justify-center mb-4 text-slate-300">
+                                                    <Camera className="w-8 h-8" />
+                                                </div>
+                                                <p className="text-xs font-bold text-slate-400 mb-4 px-4 leading-relaxed">Agrega una fotografía para identificar rápidamente al paciente.</p>
+                                                <button type="button" onClick={startCamera} className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-2 transition-all hover:-translate-y-0.5">
+                                                    <Camera className="w-4 h-4" /> Activar Cámara
+                                                </button>
+                                            </div>
+                                        )}
+                                        <canvas ref={canvasRef} className="hidden" />
                                     </div>
                                 </div>
 
-                                {/* Sección 2: Contacto y Médico */}
-                                <div className="space-y-4">
-                                    <h4 className="font-bold text-xs uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Contacto y Admisión</h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Teléfono Móvil</label>
-                                            <input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" placeholder="10 Dígitos" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">RFC</label>
-                                            <input type="text" value={formData.rfc} onChange={e => setFormData({ ...formData, rfc: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700 uppercase" placeholder="13 Caracteres" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-600 mb-1">Diagnóstico / Condición Principal</label>
-                                        <input type="text" value={formData.main_condition} onChange={e => setFormData({ ...formData, main_condition: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" placeholder="Ej. Hipertensión (Opcional)" />
-                                    </div>
-                                    <div>
-                                            <label className="block text-xs font-bold text-slate-600 mb-1">Nivel de Riesgo Clínico</label>
-                                            <div className="flex bg-slate-100 p-1 rounded-lg">
-                                                <button type="button" onClick={() => setFormData({ ...formData, risk: 'low' })} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${formData.risk === 'low' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>Bajo</button>
-                                                <button type="button" onClick={() => setFormData({ ...formData, risk: 'medium' })} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${formData.risk === 'medium' ? 'bg-white shadow text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}>Medio</button>
-                                                <button type="button" onClick={() => setFormData({ ...formData, risk: 'high' })} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${formData.risk === 'high' ? 'bg-white shadow text-red-600' : 'text-slate-500 hover:text-slate-700'}`}>Alto</button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {/* COLUMNA DERECHA: FORMULARIO */}
+                                <div className="flex-1 space-y-10">
                                     
-                                    {/* Sección 3: Datos de Facturación / Fiscal (ARMED Feature) */}
-                                    <div className="space-y-4 md:col-span-2 mt-4 pt-4 border-t border-slate-100">
-                                        <h4 className="font-bold text-xs uppercase tracking-widest text-slate-400 pb-2 flex items-center gap-2">
-                                            <FileText className="w-3.5 h-3.5" /> Ficha Fiscal (Facturación) <span className="font-normal text-slate-300 text-[10px]">- Opcional</span>
+                                    {/* Sección 1: Información Básica */}
+                                    <div className="space-y-5">
+                                        <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-teal-600 border-b border-slate-100 pb-3 flex items-center gap-2">Información Básica</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                                            <div className="xl:col-span-3">
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Nombre(s) *</label>
+                                                <input required type="text" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Apellido Paterno *</label>
+                                                <input required type="text" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Apellido Materno</label>
+                                                <input type="text" value={formData.second_last_name} onChange={e => setFormData({ ...formData, second_last_name: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Fecha de Nacimiento</label>
+                                                <input type="date" value={formData.date_of_birth} onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Género</label>
+                                                <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm">
+                                                    <option value="">No especificado</option>
+                                                    <option value="M">Masculino</option>
+                                                    <option value="F">Femenino</option>
+                                                    <option value="O">Otro</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Tipo Sanguíneo</label>
+                                                <select value={formData.blood_type} onChange={e => setFormData({ ...formData, blood_type: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold text-slate-800 text-sm">
+                                                    <option value="">Selecciona</option>
+                                                    <option value="A+">A+</option><option value="A-">A-</option>
+                                                    <option value="B+">B+</option><option value="B-">B-</option>
+                                                    <option value="O+">O+</option><option value="O-">O-</option>
+                                                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Alias Descriptivo</label>
+                                                <input type="text" value={formData.alias} onChange={e => setFormData({ ...formData, alias: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all font-medium text-slate-700 text-sm" placeholder="Opcional" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Sección 2: Contacto y Relevante */}
+                                    <div className="space-y-5">
+                                        <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-indigo-500 border-b border-slate-100 pb-3 flex items-center gap-2">Contacto y Admisión</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Teléfono Móvil</label>
+                                                <input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-slate-800 text-sm" placeholder="10 Dígitos" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">RFC</label>
+                                                <input type="text" value={formData.rfc} onChange={e => setFormData({ ...formData, rfc: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-slate-800 text-sm uppercase" placeholder="13 Caracteres" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Nivel de Riesgo Clínico</label>
+                                                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1">
+                                                    <button type="button" onClick={() => setFormData({ ...formData, risk: 'low' })} className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-all ${formData.risk === 'low' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Bajo</button>
+                                                    <button type="button" onClick={() => setFormData({ ...formData, risk: 'medium' })} className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-all ${formData.risk === 'medium' ? 'bg-white shadow-sm text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}>Medio</button>
+                                                    <button type="button" onClick={() => setFormData({ ...formData, risk: 'high' })} className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-all ${formData.risk === 'high' ? 'bg-white shadow-sm text-red-600' : 'text-slate-400 hover:text-slate-600'}`}>Alto</button>
+                                                </div>
+                                            </div>
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Diagnóstico Principal (Opcional)</label>
+                                                <input type="text" value={formData.main_condition} onChange={e => setFormData({ ...formData, main_condition: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-700 text-sm" placeholder="Ej. Hipertensión controlada" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Sección 3: Fiscal */}
+                                    <div className="space-y-5 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                                        <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-500 pb-2 flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-slate-400" /> Facturación
                                         </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-600 mb-1">Razón Social</label>
-                                                <input type="text" value={formData.business_name} onChange={e => setFormData({ ...formData, business_name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" placeholder="Ej. Empresa SA de CV" />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                                            <div className="xl:col-span-1">
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Código Postal</label>
+                                                <input type="text" value={formData.postal_code} onChange={e => setFormData({ ...formData, postal_code: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-500/10 transition-all font-bold text-slate-700 text-sm" placeholder="5 Dígitos" />
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-600 mb-1">Código Postal</label>
-                                                <input type="text" value={formData.postal_code} onChange={e => setFormData({ ...formData, postal_code: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700" placeholder="5 Dígitos" />
+                                            <div className="xl:col-span-2">
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Razón Social</label>
+                                                <input type="text" value={formData.business_name} onChange={e => setFormData({ ...formData, business_name: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-500/10 transition-all font-bold text-slate-700 text-sm" placeholder="Ej. Empresa SA de CV" />
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-600 mb-1">Régimen Fiscal</label>
-                                                <select value={formData.tax_regime} onChange={e => setFormData({ ...formData, tax_regime: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition font-medium text-slate-700 text-sm">
+                                            <div className="xl:col-span-3">
+                                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1.5 truncate">Régimen Fiscal</label>
+                                                <select value={formData.tax_regime} onChange={e => setFormData({ ...formData, tax_regime: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-500/10 transition-all font-bold text-slate-700 text-sm">
                                                     <option value="">No aplica</option>
-                                                    <option value="601">601 General de Ley Personas Morales</option>
-                                                    <option value="606">606 Arrendamiento</option>
-                                                    <option value="612">612 Personas Físicas Actividades Empresariales</option>
-                                                    <option value="626">626 RESICO</option>
+                                                    <option value="601">601 - LEY PERSONAS MORALES</option>
+                                                    <option value="606">606 - ARRENDAMIENTO</option>
+                                                    <option value="612">612 - PF ACTIVIDADES EMPRESA</option>
+                                                    <option value="626">626 - RESICO</option>
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
-
+                                    
                                 </div>
-
-                            <div className="pt-4 flex gap-3 justify-end border-t border-slate-100 mt-8">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition">Cancelar</button>
-                                <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 transition shadow-md disabled:opacity-50">
-                                    {saving ? 'Registrando...' : 'Registrar Paciente'}
+                            </div>
+                            
+                            {/* FOOTER ACTIONS */}
+                            <div className="mt-10 pt-6 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 bg-white shadow-[0_-20px_20px_-15px_rgba(255,255,255,1)]">
+                                <button type="button" onClick={() => { stopCamera(); setIsModalOpen(false); }} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all active:scale-95">
+                                    Cancelar
+                                </button>
+                                <button type="submit" disabled={saving} className="px-8 py-3 rounded-xl font-black text-white bg-slate-900 hover:bg-black transition-all shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] active:scale-95 disabled:opacity-50 flex items-center gap-2">
+                                    {saving ? 'Registrando...' : <><Users className="w-4 h-4"/> Guardar Expediente</>}
                                 </button>
                             </div>
                         </form>
-
                     </div>
                 </div>
             )}

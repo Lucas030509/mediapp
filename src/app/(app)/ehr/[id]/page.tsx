@@ -272,9 +272,13 @@ export default function PatientEHRPage() {
             {/* Patient Header Block */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
                 <div className="flex gap-4 items-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 flex flex-col items-center justify-center text-white font-bold tracking-tight text-xl uppercase">
-                        {getInitials()}
-                    </div>
+                    {patient.photo_url ? (
+                        <img src={patient.photo_url} alt="Profile" className="w-16 h-16 rounded-2xl object-cover shadow-md shadow-blue-500/20 border-2 border-white" />
+                    ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 flex flex-col items-center justify-center text-white font-bold tracking-tight text-xl uppercase">
+                            {getInitials()}
+                        </div>
+                    )}
                     <div>
                         <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
                             {patient.first_name} {patient.last_name} {patient.second_last_name || ''}
