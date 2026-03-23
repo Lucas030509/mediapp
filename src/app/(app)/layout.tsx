@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { Home, Settings, Users, Calendar, FileText, Video, Receipt, Activity, LogOut, Stethoscope, ClipboardList, Building2 } from 'lucide-react';
+import { Home, Settings, Users, Calendar, FileText, Video, Receipt, Activity, LogOut, Stethoscope, ClipboardList, Building2, Package } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -42,7 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-teal-500 selection:text-white">
             {/* Sidebar de alta fidelidad estética */}
-            <aside className="w-72 bg-slate-900 border-r border-slate-800 text-slate-300 min-h-screen flex flex-col relative overflow-hidden transition-all duration-300">
+            <aside className="print:hidden w-72 bg-slate-900 border-r border-slate-800 text-slate-300 min-h-screen flex flex-col relative overflow-hidden transition-all duration-300">
 
                 {/* Efecto Glow Decorativo */}
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-teal-500/20 to-transparent pointer-events-none" />
@@ -71,6 +71,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                             <span className="font-medium">Gestión de Pacientes</span>
                         </div>
                         <span className="bg-teal-500/10 text-teal-400 py-0.5 px-2 rounded-full text-xs font-bold border border-teal-500/20">CRM</span>
+                    </Link>
+
+                    <Link href="/enfermeria" className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">
+                        <div className="flex items-center gap-3">
+                            <Activity className="w-5 h-5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+                            <span className="font-medium">Triage y Enfermería</span>
+                        </div>
                     </Link>
 
                     <Link href="/agenda" className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">
@@ -120,6 +127,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                         <Receipt className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
                         <span className="font-medium">Facturación</span>
                     </Link>
+
+                    <Link href="/inventario" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white active:bg-white/10 transition-all group">
+                        <Package className="w-5 h-5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+                        <span className="font-medium">Farmacia e Inventario</span>
+                    </Link>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800 bg-slate-900/50 backdrop-blur-xl z-10 w-full relative">
@@ -137,8 +149,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </aside>
 
             {/* Área del Dashboard principal */}
-            <main className="flex-1 overflow-x-hidden pt-4 pb-12 px-8 z-0">
-                <header className="flex justify-between items-center mb-8 bg-white/50 backdrop-blur-xs border border-slate-200/60 p-4 rounded-2xl shadow-sm sticky top-4 z-50">
+            <main className="flex-1 overflow-x-hidden pt-4 pb-12 px-8 z-0 print:p-0">
+                <header className="print:hidden flex justify-between items-center mb-8 bg-white/50 backdrop-blur-xs border border-slate-200/60 p-4 rounded-2xl shadow-sm sticky top-4 z-50">
                     <div className="flex items-center gap-2">
                         <span className="bg-teal-50 text-teal-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide border border-teal-100 flex items-center gap-1.5">
                             <span className="relative flex h-2 w-2">

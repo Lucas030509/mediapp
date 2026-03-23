@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, FileText, Activity, Pill, Scissors, FileCode2, Clock, ChevronDown, Award, UploadCloud, Image as ImageIcon, Star, Trash2, X, ShieldAlert } from 'lucide-react';
+import { Search, FileText, Activity, Pill, Scissors, FileCode2, Clock, ChevronDown, Award, UploadCloud, Image as ImageIcon, Star, Trash2, X, ShieldAlert, Plus, Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import ImageLightbox from '@/components/ImageLightbox';
 import toast from 'react-hot-toast';
+import { CIE10_DB } from '@/lib/data/cie10';
 
 export default function PatientEHRPage() {
     const [activeTab, setActiveTab] = useState('timeline');
@@ -38,8 +39,13 @@ export default function PatientEHRPage() {
     const [noteData, setNoteData] = useState({
         subjective_text: '', objective_text: '', analysis_text: '', plan_text: '', consultation_date: new Date().toISOString().substring(0, 10)
     });
+    // Modal CIE-10
+    const [isCie10Open, setIsCie10Open] = useState(false);
+    const [cieSearch, setCieSearch] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const photoInputRef = useRef<HTMLInputElement>(null);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -104,10 +110,33 @@ export default function PatientEHRPage() {
                 file_type: file.type
             });
             fetchPatient(); // Recargar documentos
+            toast.success('Estudio guardado en el expediente.');
         } else {
-            toast.error('Error subiendo imagen. ¿Aseguraste ejecutar el SQL de Fase 3? ' + uploadError.message);
+            toast.error('Error subiendo estudio. Verifica el Bucket en Supabase.');
         }
         setIsUploading(false);
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !id) return;
+
+        setIsUploadingPhoto(true);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `avatar_${id}_${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage.from('clinical_documents').upload(filePath, file);
+
+        if (!uploadError) {
+            const { data } = supabase.storage.from('clinical_documents').getPublicUrl(filePath);
+            await supabase.from('patients').update({ photo_url: data.publicUrl }).eq('id', id);
+            toast.success('Foto de perfil actualizada.');
+            fetchPatient();
+        } else {
+            toast.error('Error al subir la fotografía.');
+        }
+        setIsUploadingPhoto(false);
     };
 
     const deleteDocument = async (docId: string, path: string) => {
@@ -213,7 +242,33 @@ export default function PatientEHRPage() {
         }
     };
 
-    const handlePrintPrescription = () => {
+    const [isSavingRx, setIsSavingRx] = useState(false);
+
+    const handlePrintPrescription = async () => {
+        if (!prescriptionText.trim() && !confirm('La receta está vacía. ¿Aún así deseas imprimir el formato en blanco?')) {
+            return;
+        }
+
+        // Registrar la receta en el Historial Evolutivo (DB)
+        if (prescriptionText.trim()) {
+            setIsSavingRx(true);
+            const { error } = await supabase.from('clinical_notes').insert({
+                patient_id: id,
+                consultation_date: new Date().toISOString(),
+                subjective_text: 'EMISIÓN DE RECETA MÉDICA (VADEMÉCUM)',
+                plan_text: prescriptionText,
+            });
+            setIsSavingRx(false);
+            
+            if (error) {
+                toast.error('Error al guardar registro de receta en DB');
+                return;
+            }
+            toast.success('Receta foliada y archivada temporalmente en la base de datos.');
+            fetchPatient(); // Refresca la línea del tiempo
+        }
+
+        // Disparar ventana de impresión del sistema
         window.print();
     };
 
@@ -243,6 +298,19 @@ export default function PatientEHRPage() {
         }
     };
 
+    const filteredCie10 = cieSearch.trim() ? CIE10_DB.filter(c => {
+        const terms = cieSearch.toLowerCase().split(' ').filter(Boolean);
+        const searchTarget = (c.code + " " + c.desc).toLowerCase();
+        return terms.every(term => searchTarget.includes(term));
+    }) : CIE10_DB.slice(0, 20);
+
+    const selectCie10 = (code: string, desc: string) => {
+        const text = noteData.analysis_text ? `${noteData.analysis_text}\n[${code}] ${desc}` : `[${code}] ${desc}`;
+        setNoteData({ ...noteData, analysis_text: text });
+        setIsCie10Open(false);
+        toast.success("Diagnóstico agregado.");
+    };
+
     if(!patient) return <div className="p-8 text-center animate-pulse text-slate-500 font-medium">Cargando expediente...</div>;
 
     const getInitials = () => {
@@ -257,7 +325,7 @@ export default function PatientEHRPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start print:hidden">
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Historia Clínica Electrónica</h1>
                     <p className="text-slate-500 mt-1 font-medium">Expediente Clínico Universal e interoperable (EHR).</p>
@@ -270,15 +338,24 @@ export default function PatientEHRPage() {
             </div>
 
             {/* Patient Header Block */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between print:hidden">
                 <div className="flex gap-4 items-center">
-                    {patient.photo_url ? (
-                        <img src={patient.photo_url} alt="Profile" className="w-16 h-16 rounded-2xl object-cover shadow-md shadow-blue-500/20 border-2 border-white" />
-                    ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 flex flex-col items-center justify-center text-white font-bold tracking-tight text-xl uppercase">
-                            {getInitials()}
+                    <div 
+                        onClick={() => photoInputRef.current?.click()}
+                        className="w-16 h-16 rounded-2xl shadow-md shadow-blue-500/20 flex flex-col items-center justify-center text-white font-bold tracking-tight text-xl uppercase cursor-pointer hover:scale-105 transition-all group relative overflow-hidden shrink-0 border-2 border-white bg-gradient-to-br from-blue-500 to-indigo-600"
+                    >
+                        {isUploadingPhoto ? (
+                            <Activity className="w-6 h-6 animate-pulse" />
+                        ) : patient.photo_url ? (
+                            <img src={patient.photo_url} alt="Profile" className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                            getInitials()
+                        )}
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center translate-y-full group-hover:translate-y-0 transition-transform">
+                            <Camera className="w-5 h-5 text-white" />
                         </div>
-                    )}
+                    </div>
+                    <input type="file" ref={photoInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                     <div>
                         <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
                             {patient.first_name} {patient.last_name} {patient.second_last_name || ''}
@@ -309,7 +386,7 @@ export default function PatientEHRPage() {
             </div>
 
             {/* Macro-Campo de Resumen General Infinito */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 animate-in slide-in-from-bottom-2 duration-700">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 animate-in slide-in-from-bottom-2 duration-700 print:hidden">
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-500" /> Resumen Médico General (Persistente)</h3>
                     {isSavingSummary && <span className="text-xs font-semibold text-indigo-400 animate-pulse bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">Guardando silenciosamente...</span>}
@@ -324,9 +401,9 @@ export default function PatientEHRPage() {
             </div>
 
             {/* EHR Navigation Module */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 print:block">
                 {/* Navigation column */}
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 h-fit space-y-1.5">
+                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 h-fit space-y-1.5 print:hidden">
                     <button onClick={() => setActiveTab('timeline')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === 'timeline' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-semibold'}`}>
                         <Clock className={`w-5 h-5 ${activeTab === 'timeline' ? 'text-blue-600' : 'text-slate-400'}`} />
                         Línea del Tiempo
@@ -350,10 +427,10 @@ export default function PatientEHRPage() {
                 </div>
 
                 {/* Content Area */}
-                <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 print:p-0 print:border-none print:shadow-none print:block">
 
                     {activeTab === 'timeline' && (
-                        <div className="animate-in fade-in duration-300">
+                        <div className="animate-in fade-in duration-300 print:hidden">
                             <div className="flex justify-between items-center mb-8">
                                 <h3 className="text-xl font-bold text-slate-800">Cronología de Visitas</h3>
                                 <button 
@@ -521,7 +598,7 @@ export default function PatientEHRPage() {
 
                     {/* --- PESTAÑA: RECETAS (ARMED FEATURE) --- */}
                     {activeTab === 'rx' && (
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col xl:flex-row gap-6 animate-in slide-in-from-bottom-2">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col xl:flex-row gap-6 animate-in slide-in-from-bottom-2 print:p-0 print:border-none print:shadow-none print:block">
                             {/* Editor de Receta */}
                             <div className="flex-1 space-y-4 print:hidden">
                                 <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
@@ -553,8 +630,8 @@ export default function PatientEHRPage() {
 
                                 <div className="flex gap-3 justify-end items-center border-t border-slate-100 pt-4 mt-4">
                                     <button onClick={() => setPrescriptionText('')} className="px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition">Limpiar Texto</button>
-                                    <button onClick={handlePrintPrescription} className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-2 shadow-md">
-                                        <FileText className="w-4 h-4" /> Generar e Imprimir PDF
+                                    <button onClick={handlePrintPrescription} disabled={isSavingRx} className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-2 shadow-md disabled:opacity-50">
+                                        <FileText className="w-4 h-4" /> {isSavingRx ? 'Archivando...' : 'Generar e Imprimir PDF'}
                                     </button>
                                 </div>
                             </div>
@@ -748,7 +825,12 @@ export default function PatientEHRPage() {
                                 </div>
                                 <div className="flex flex-col md:flex-row gap-4">
                                     <div className="flex-1">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Análisis (Diagnóstico / Impresión Clínica)</label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Análisis (Diagnóstico)</label>
+                                            <button type="button" onClick={() => setIsCie10Open(true)} className="text-[10px] font-black bg-amber-50 text-amber-600 hover:bg-amber-100 px-2 py-1 rounded-md flex items-center gap-1 transition">
+                                                <Search className="w-3 h-3" /> BUSCAR CIE-10
+                                            </button>
+                                        </div>
                                         <textarea 
                                             rows={4} 
                                             value={noteData.analysis_text} 

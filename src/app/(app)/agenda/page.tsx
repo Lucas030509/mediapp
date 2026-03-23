@@ -16,6 +16,7 @@ export default function AgendaPage() {
     const [rescheduleModal, setRescheduleModal] = useState({ isOpen: false, id: '', date: '', start_time: '', end_time: '' });
     const [patients, setPatients] = useState<any[]>([]);
     const [doctors, setDoctors] = useState<any[]>([]);
+    const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -55,7 +56,10 @@ export default function AgendaPage() {
             supabase.from('rooms').select('id, name').order('name')
         ]);
         if (pData) setPatients(pData);
-        if (dData) setDoctors(dData);
+        if (dData) {
+            setDoctors(dData);
+            setSelectedDoctors(dData.map(d => d.id)); // Seleccionar todos por default
+        }
         if (rData) setRooms(rData);
     };
 
@@ -207,6 +211,30 @@ export default function AgendaPage() {
     const handleReschedule = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
+
+        const currentApt = appointments.find(a => a.id === rescheduleModal.id);
+
+        // VALIDACIÓN DE CHOQUES EN REAGENDADO
+        const { data: conflicts } = await supabase
+            .from('appointments')
+            .select('id, start_time, end_time, doctor_id, room_id, status')
+            .eq('appointment_date', rescheduleModal.date)
+            .neq('status', 'cancelled')
+            .neq('id', rescheduleModal.id); // Ignorar la cita actual que estamos moviendo
+
+        const hasOverlap = conflicts?.some(c => {
+            const sameDoctor = c.doctor_id === currentApt?.doctor_id;
+            const sameRoom = currentApt?.room_id && c.room_id === currentApt.room_id;
+            const timeOverlap = (rescheduleModal.start_time < c.end_time) && (rescheduleModal.end_time > c.start_time);
+            return (sameDoctor || sameRoom) && timeOverlap;
+        });
+
+        if (hasOverlap) {
+            toast.error("¡ALERTA!: Cruce detectado. El horario choca con otra cita al intentar reagendar.", { icon: '🚫' });
+            setSaving(false);
+            return;
+        }
+
         const { error } = await supabase.from('appointments').update({
             appointment_date: rescheduleModal.date,
             start_time: rescheduleModal.start_time,
@@ -296,8 +324,9 @@ export default function AgendaPage() {
         return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
     };
 
-    // Agrupamos citas por fecha
-    const groupedAppointments = appointments.reduce((acc: any, curr: any) => {
+    // Aplicar filtro de doctores y agrupar citas por fecha
+    const filteredAppointments = appointments.filter(a => selectedDoctors.length === 0 || selectedDoctors.includes(a.doctor_id));
+    const groupedAppointments = filteredAppointments.reduce((acc: any, curr: any) => {
         if (!acc[curr.appointment_date]) acc[curr.appointment_date] = [];
         acc[curr.appointment_date].push(curr);
         return acc;
@@ -305,10 +334,10 @@ export default function AgendaPage() {
 
     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' } as const;
 
-    const completedCount = appointments.filter(a => a.status === 'completed').length;
-    const pendingCount = appointments.filter(a => a.status === 'scheduled').length;
+    const completedCount = filteredAppointments.filter(a => a.status === 'completed').length;
+    const pendingCount = filteredAppointments.filter(a => a.status === 'scheduled').length;
     let aiMessage = "La agenda fluye excelente.";
-    if (appointments.length === 0) aiMessage = "Día sin citas programadas.";
+    if (filteredAppointments.length === 0) aiMessage = "Día sin citas programadas.";
     else if (pendingCount > 6) aiMessage = "Alta densidad de citas. Sugerimos agilizar tiempos.";
     else if (pendingCount > 0 && completedCount > 0) aiMessage = `Buen ritmo de atención, llevas ${completedCount} cita(s) terminada(s).`;
 
@@ -348,7 +377,15 @@ export default function AgendaPage() {
                         <div className="space-y-3">
                             {doctors.length === 0 ? <p className="text-xs text-slate-400">Cargando...</p> : doctors.map(doc => (
                                 <label key={doc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition">
-                                    <input type="checkbox" defaultChecked className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500" />
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedDoctors.includes(doc.id)} 
+                                        onChange={(e) => {
+                                            if (e.target.checked) setSelectedDoctors([...selectedDoctors, doc.id]);
+                                            else setSelectedDoctors(selectedDoctors.filter(id => id !== doc.id));
+                                        }}
+                                        className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500" 
+                                    />
                                     <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs uppercase">
                                         {doc.first_name?.[0]}{doc.last_name?.[0]}
                                     </div>
@@ -441,14 +478,17 @@ export default function AgendaPage() {
 
                                                             <div className="flex flex-col items-end justify-between gap-2 border-l border-slate-100 pl-4">
                                                                 <div className="flex items-center gap-2">
+                                                                    {(cita.status === 'scheduled' || cita.status === 'no-show') && (
+                                                                        <button 
+                                                                            onClick={() => setRescheduleModal({ isOpen: true, id: cita.id, date: cita.appointment_date, start_time: cita.start_time, end_time: cita.end_time })} 
+                                                                            className="text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-2 py-1.5 rounded transition shadow-sm active:scale-95 flex items-center gap-1"
+                                                                        >
+                                                                            <CalendarIcon className="w-3 h-3"/> Reagendar
+                                                                        </button>
+                                                                    )}
+
                                                                     {cita.status === 'scheduled' && (
                                                                         <>
-                                                                            <button 
-                                                                                onClick={() => setRescheduleModal({ isOpen: true, id: cita.id, date: cita.appointment_date, start_time: cita.start_time, end_time: cita.end_time })} 
-                                                                                className="text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-2 py-1.5 rounded transition shadow-sm active:scale-95 flex items-center gap-1"
-                                                                            >
-                                                                                <CalendarIcon className="w-3 h-3"/> Reagendar
-                                                                            </button>
                                                                             <button 
                                                                                 onClick={() => updateStatus(cita.id, 'no-show')} 
                                                                                 className="text-[10px] font-bold bg-slate-500 hover:bg-slate-600 text-white px-2 py-1.5 rounded transition shadow-sm active:scale-95"

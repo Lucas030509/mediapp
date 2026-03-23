@@ -1,12 +1,67 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Video, Mic, MicOff, VideoOff, PhoneMissed, MessageSquare, Send, FileCode2, UserCircle, Share2, Maximize } from 'lucide-react';
 
 export default function TelemedicinaPage() {
-    const [micOn, setMicOn] = useState(true);
-    const [camOn, setCamOn] = useState(true);
+    const [micOn, setMicOn] = useState(false);
+    const [camOn, setCamOn] = useState(false);
     const [chatOpen, setChatOpen] = useState(true);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+
+    const toggleCamera = async () => {
+        if (!camOn && !micOn) {
+            try {
+                const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                setStream(mediaStream);
+                setCamOn(true);
+                setMicOn(true);
+            } catch (err) {
+                console.error("Camera access denied:", err);
+            }
+        } else {
+            // Already have stream, just toggle tracks
+            if (stream) {
+                stream.getVideoTracks().forEach(track => track.enabled = !camOn);
+            }
+            setCamOn(!camOn);
+        }
+    };
+
+    const toggleMic = async () => {
+        if (!camOn && !micOn) {
+            try {
+                const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                setStream(mediaStream);
+                setCamOn(true);
+                setMicOn(true);
+            } catch (err) {
+                console.error("Mic access denied:", err);
+            }
+        } else {
+            if (stream) {
+                stream.getAudioTracks().forEach(track => track.enabled = !micOn);
+            }
+            setMicOn(!micOn);
+        }
+    };
+
+    const stopStream = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setCamOn(false);
+        setMicOn(false);
+    };
+
+    useEffect(() => {
+        if (localVideoRef.current && stream) {
+            localVideoRef.current.srcObject = stream;
+        }
+    }, [stream, camOn]);
+
 
     return (
         <div className="h-[calc(100vh-8rem)] flex flex-col gap-6 animate-in fade-in duration-500">
@@ -30,12 +85,26 @@ export default function TelemedicinaPage() {
                 {/* Main Video Area */}
                 <div className="flex-1 bg-gradient-to-br from-slate-900 to-black rounded-2xl border-4 border-slate-800 overflow-hidden relative shadow-2xl flex flex-col group">
 
-                    {/* PIP Doctor */}
-                    <div className="absolute top-4 right-4 w-40 h-56 bg-slate-800 rounded-xl border-2 border-slate-600 shadow-xl overflow-hidden z-20">
-                        <div className="w-full h-full bg-gradient-to-t from-teal-900/50 to-slate-800 flex items-center justify-center opacity-70">
-                            <UserCircle className="w-10 h-10 text-white opacity-40" />
+                    {/* PIP Doctor (Local Stream) */}
+                    <div className="absolute top-4 right-4 w-40 h-56 bg-slate-800 rounded-xl border-2 border-slate-600 shadow-xl overflow-hidden z-20 transition-all hover:scale-105">
+                        {camOn && stream ? (
+                            <video 
+                                ref={localVideoRef} 
+                                autoPlay 
+                                playsInline 
+                                muted 
+                                className="w-full h-full object-cover -scale-x-100" // -scale-x-100 creates mirror effect
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-t from-teal-900/50 to-slate-800 flex flex-col items-center justify-center opacity-90">
+                                <UserCircle className="w-10 h-10 text-slate-400 mb-2" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Cámara Apagada</span>
+                            </div>
+                        )}
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded backdrop-blur">
+                            {!micOn && <MicOff className="w-3 h-3 text-red-400" />}
+                            <span className="text-[10px] font-bold text-white uppercase">Tú (Dr.)</span>
                         </div>
-                        <div className="absolute bottom-2 left-2 text-[10px] font-bold text-white bg-black/50 px-2 py-0.5 rounded backdrop-blur">Tú</div>
                     </div>
 
                     {/* Patient Video Placeholder */}
@@ -56,20 +125,20 @@ export default function TelemedicinaPage() {
 
                     {/* Call Controls Overlay */}
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md rounded-2xl flex p-2 gap-2 border border-white/10 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <button onClick={() => setMicOn(!micOn)} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>
+                        <button onClick={toggleMic} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-lg ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-red-500/20'}`}>
                             {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
                         </button>
-                        <button onClick={() => setCamOn(!camOn)} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>
+                        <button onClick={toggleCamera} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-lg ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-red-500/20'}`}>
                             {camOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
                         </button>
-                        <button className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 text-white hover:bg-white/20 transition-all">
+                        <button className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg">
                             <Share2 className="w-5 h-5" />
                         </button>
-                        <button className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-all font-bold px-8" title="Finalizar Sesión">
+                        <button onClick={stopStream} className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-all font-bold px-8 shadow-lg shadow-red-500/30" title="Finalizar Sesión">
                             <PhoneMissed className="w-5 h-5" />
                         </button>
-                        <button className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 text-white hover:bg-white/20 transition-all border-l border-white/20 rounded-l-none pl-4">
-                            <Maximize className="w-5 h-5" />
+                        <button onClick={() => setChatOpen(!chatOpen)} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all border-l border-white/20 rounded-l-none pl-4 ${chatOpen ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-300'}`}>
+                            <MessageSquare className="w-5 h-5" />
                         </button>
                     </div>
                 </div>

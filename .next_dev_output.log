@@ -1,0 +1,786 @@
+
+> saas-core@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.3.230:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 8s
+○ Compiling / ...
+ GET / 200 in 7.0s (compile: 5.2s, proxy.ts: 1700ms, render: 100ms)
+ GET /login 200 in 372ms (compile: 220ms, proxy.ts: 139ms, render: 12ms)
+ POST /api/auth/login 303 in 828ms (compile: 230ms, proxy.ts: 241ms, render: 357ms)
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /dashboard 200 in 2.5s (compile: 1032ms, proxy.ts: 739ms, render: 754ms)
+✓ Compiled in 130ms
+✓ Compiled in 131ms
+ GET / 200 in 1289ms (compile: 48ms, proxy.ts: 1183ms, render: 58ms)
+✓ Compiled in 964ms
+ GET / 200 in 1401ms (compile: 6ms, proxy.ts: 1368ms, render: 27ms)
+ GET /dashboard 200 in 2.4s (compile: 115ms, proxy.ts: 2.0s, render: 269ms)
+ GET / 200 in 302ms (compile: 37ms, proxy.ts: 244ms, render: 21ms)
+ GET / 200 in 125ms (compile: 4ms, proxy.ts: 106ms, render: 15ms)
+ GET /dashboard 200 in 464ms (compile: 19ms, proxy.ts: 422ms, render: 23ms)
+ GET / 200 in 101ms (compile: 1136µs, proxy.ts: 89ms, render: 11ms)
+ GET / 200 in 110ms (compile: 3ms, proxy.ts: 90ms, render: 17ms)
+ GET /dashboard 200 in 216ms (compile: 1337µs, proxy.ts: 199ms, render: 16ms)
+ GET / 200 in 116ms (compile: 1158µs, proxy.ts: 102ms, render: 13ms)
+ GET / 200 in 112ms (compile: 1404µs, proxy.ts: 98ms, render: 13ms)
+ GET / 200 in 128ms (compile: 24ms, proxy.ts: 90ms, render: 13ms)
+ GET /dashboard 200 in 297ms (compile: 4ms, proxy.ts: 256ms, render: 37ms)
+ GET / 200 in 107ms (compile: 2ms, proxy.ts: 92ms, render: 13ms)
+ GET / 200 in 114ms (compile: 14ms, proxy.ts: 88ms, render: 13ms)
+ GET /dashboard 200 in 230ms (compile: 3ms, proxy.ts: 201ms, render: 26ms)
+ GET / 200 in 106ms (compile: 1114µs, proxy.ts: 94ms, render: 11ms)
+ GET / 200 in 113ms (compile: 1457µs, proxy.ts: 95ms, render: 16ms)
+ GET /dashboard 200 in 288ms (compile: 1542µs, proxy.ts: 269ms, render: 17ms)
+ GET / 200 in 114ms (compile: 1253µs, proxy.ts: 99ms, render: 14ms)
+ GET / 200 in 105ms (compile: 1001µs, proxy.ts: 95ms, render: 9ms)
+ GET /dashboard 200 in 209ms (compile: 1126µs, proxy.ts: 192ms, render: 16ms)
+ GET / 200 in 132ms (compile: 978µs, proxy.ts: 120ms, render: 12ms)
+ GET / 200 in 122ms (compile: 1998µs, proxy.ts: 102ms, render: 18ms)
+ GET /dashboard 200 in 282ms (compile: 1841µs, proxy.ts: 257ms, render: 23ms)
+ GET / 200 in 121ms (compile: 1988µs, proxy.ts: 102ms, render: 17ms)
+ GET / 200 in 109ms (compile: 1068µs, proxy.ts: 98ms, render: 10ms)
+ GET /dashboard 200 in 233ms (compile: 1150µs, proxy.ts: 215ms, render: 17ms)
+ GET / 200 in 110ms (compile: 891µs, proxy.ts: 99ms, render: 9ms)
+ GET / 200 in 115ms (compile: 1913µs, proxy.ts: 97ms, render: 16ms)
+ GET / 200 in 141ms (compile: 2ms, proxy.ts: 125ms, render: 14ms)
+ GET /dashboard 200 in 273ms (compile: 3ms, proxy.ts: 229ms, render: 41ms)
+ GET / 200 in 116ms (compile: 977µs, proxy.ts: 105ms, render: 10ms)
+ GET / 200 in 114ms (compile: 3ms, proxy.ts: 92ms, render: 19ms)
+ GET /dashboard 200 in 278ms (compile: 1091µs, proxy.ts: 257ms, render: 20ms)
+ GET / 200 in 121ms (compile: 1588µs, proxy.ts: 101ms, render: 18ms)
+ GET / 200 in 114ms (compile: 1731µs, proxy.ts: 96ms, render: 17ms)
+ GET /dashboard 200 in 229ms (compile: 1504µs, proxy.ts: 206ms, render: 21ms)
+ GET / 200 in 116ms (compile: 1425µs, proxy.ts: 100ms, render: 14ms)
+ GET / 200 in 135ms (compile: 2ms, proxy.ts: 105ms, render: 28ms)
+ GET /dashboard 200 in 218ms (compile: 1686µs, proxy.ts: 201ms, render: 16ms)
+ GET / 200 in 129ms (compile: 3ms, proxy.ts: 105ms, render: 20ms)
+ GET / 200 in 147ms (compile: 5ms, proxy.ts: 99ms, render: 44ms)
+ GET /dashboard 200 in 260ms (compile: 2ms, proxy.ts: 233ms, render: 25ms)
+ GET / 200 in 134ms (compile: 1326µs, proxy.ts: 120ms, render: 13ms)
+ GET / 200 in 128ms (compile: 2ms, proxy.ts: 110ms, render: 16ms)
+ GET /dashboard 200 in 241ms (compile: 1144µs, proxy.ts: 206ms, render: 34ms)
+ GET / 200 in 108ms (compile: 1299µs, proxy.ts: 95ms, render: 12ms)
+ GET / 200 in 113ms (compile: 3ms, proxy.ts: 99ms, render: 11ms)
+ GET /dashboard 200 in 232ms (compile: 1590µs, proxy.ts: 197ms, render: 33ms)
+ GET / 200 in 116ms (compile: 1451µs, proxy.ts: 97ms, render: 18ms)
+ GET /dashboard 200 in 204ms (compile: 1029µs, proxy.ts: 190ms, render: 14ms)
+ GET / 200 in 108ms (compile: 819µs, proxy.ts: 97ms, render: 10ms)
+ GET / 200 in 113ms (compile: 2ms, proxy.ts: 94ms, render: 17ms)
+ GET / 200 in 112ms (compile: 2ms, proxy.ts: 98ms, render: 12ms)
+ GET /dashboard 200 in 250ms (compile: 2ms, proxy.ts: 209ms, render: 39ms)
+ GET / 200 in 123ms (compile: 1767µs, proxy.ts: 104ms, render: 18ms)
+ GET / 200 in 127ms (compile: 2ms, proxy.ts: 111ms, render: 14ms)
+ GET /dashboard 200 in 281ms (compile: 913µs, proxy.ts: 265ms, render: 15ms)
+ GET / 200 in 119ms (compile: 2ms, proxy.ts: 100ms, render: 17ms)
+ GET / 200 in 146ms (compile: 4ms, proxy.ts: 100ms, render: 43ms)
+ GET /dashboard 200 in 242ms (compile: 3ms, proxy.ts: 219ms, render: 21ms)
+ GET / 200 in 132ms (compile: 1721µs, proxy.ts: 112ms, render: 18ms)
+ GET / 200 in 117ms (compile: 2ms, proxy.ts: 90ms, render: 25ms)
+ GET /dashboard 200 in 228ms (compile: 1550µs, proxy.ts: 210ms, render: 16ms)
+ GET / 200 in 132ms (compile: 4ms, proxy.ts: 112ms, render: 15ms)
+ GET / 200 in 129ms (compile: 1741µs, proxy.ts: 115ms, render: 13ms)
+ GET /dashboard 200 in 250ms (compile: 3ms, proxy.ts: 206ms, render: 41ms)
+ GET / 200 in 112ms (compile: 2ms, proxy.ts: 94ms, render: 16ms)
+ GET /dashboard 200 in 213ms (compile: 1136µs, proxy.ts: 197ms, render: 15ms)
+ GET / 200 in 107ms (compile: 836µs, proxy.ts: 96ms, render: 10ms)
+ GET / 200 in 102ms (compile: 2ms, proxy.ts: 89ms, render: 12ms)
+ GET / 200 in 113ms (compile: 2ms, proxy.ts: 99ms, render: 12ms)
+ GET /dashboard 200 in 229ms (compile: 3ms, proxy.ts: 185ms, render: 41ms)
+ GET / 200 in 109ms (compile: 1459µs, proxy.ts: 90ms, render: 18ms)
+ GET /dashboard 200 in 216ms (compile: 2ms, proxy.ts: 192ms, render: 22ms)
+ GET / 200 in 116ms (compile: 1027µs, proxy.ts: 101ms, render: 13ms)
+ GET / 200 in 103ms (compile: 949µs, proxy.ts: 92ms, render: 9ms)
+ GET /dashboard 200 in 230ms (compile: 4ms, proxy.ts: 196ms, render: 30ms)
+ GET / 200 in 147ms (compile: 1203µs, proxy.ts: 132ms, render: 14ms)
+ GET / 200 in 121ms (compile: 2ms, proxy.ts: 98ms, render: 20ms)
+ GET /dashboard 200 in 215ms (compile: 1424µs, proxy.ts: 195ms, render: 19ms)
+ GET / 200 in 108ms (compile: 1111µs, proxy.ts: 97ms, render: 10ms)
+ GET /dashboard 200 in 214ms (compile: 1228µs, proxy.ts: 195ms, render: 17ms)
+ GET /dashboard 200 in 240ms (compile: 4ms, proxy.ts: 201ms, render: 35ms)
+ GET /dashboard 200 in 225ms (compile: 3ms, proxy.ts: 197ms, render: 25ms)
+ GET /dashboard 200 in 222ms (compile: 3ms, proxy.ts: 185ms, render: 33ms)
+ GET /dashboard 200 in 215ms (compile: 3ms, proxy.ts: 188ms, render: 24ms)
+ GET /dashboard 200 in 243ms (compile: 4ms, proxy.ts: 205ms, render: 34ms)
+ GET /dashboard 200 in 199ms (compile: 1379µs, proxy.ts: 183ms, render: 14ms)
+ GET /dashboard 200 in 207ms (compile: 3ms, proxy.ts: 178ms, render: 27ms)
+ GET /dashboard 200 in 211ms (compile: 3ms, proxy.ts: 181ms, render: 28ms)
+ GET /dashboard 200 in 219ms (compile: 1918µs, proxy.ts: 196ms, render: 22ms)
+ GET /dashboard 200 in 233ms (compile: 3ms, proxy.ts: 192ms, render: 38ms)
+ GET /dashboard 200 in 198ms (compile: 1876µs, proxy.ts: 180ms, render: 16ms)
+ GET /dashboard 200 in 214ms (compile: 2ms, proxy.ts: 188ms, render: 23ms)
+ GET /dashboard 200 in 230ms (compile: 1389µs, proxy.ts: 210ms, render: 18ms)
+ GET /dashboard 200 in 214ms (compile: 1765µs, proxy.ts: 190ms, render: 22ms)
+ GET /dashboard 200 in 210ms (compile: 1392µs, proxy.ts: 193ms, render: 16ms)
+ GET /dashboard 200 in 223ms (compile: 4ms, proxy.ts: 185ms, render: 34ms)
+ GET /dashboard 200 in 249ms (compile: 4ms, proxy.ts: 219ms, render: 26ms)
+ GET /dashboard 200 in 246ms (compile: 3ms, proxy.ts: 218ms, render: 25ms)
+ GET /dashboard 200 in 240ms (compile: 2ms, proxy.ts: 190ms, render: 48ms)
+ GET /dashboard 200 in 228ms (compile: 1353µs, proxy.ts: 205ms, render: 22ms)
+ GET /dashboard 200 in 226ms (compile: 3ms, proxy.ts: 201ms, render: 23ms)
+ GET /dashboard 200 in 225ms (compile: 1334µs, proxy.ts: 206ms, render: 18ms)
+ GET /dashboard 200 in 226ms (compile: 7ms, proxy.ts: 194ms, render: 25ms)
+ GET /dashboard 200 in 225ms (compile: 3ms, proxy.ts: 200ms, render: 23ms)
+ GET /dashboard 200 in 216ms (compile: 1956µs, proxy.ts: 192ms, render: 21ms)
+ GET /dashboard 200 in 370ms (compile: 4ms, proxy.ts: 331ms, render: 36ms)
+ GET /dashboard 200 in 236ms (compile: 4ms, proxy.ts: 205ms, render: 27ms)
+✓ Compiled in 156ms
+✓ Compiled in 0ms
+ GET / 200 in 1637ms (compile: 35ms, proxy.ts: 1560ms, render: 43ms)
+ GET / 200 in 240ms (compile: 1319µs, proxy.ts: 227ms, render: 11ms)
+ GET / 200 in 221ms (compile: 1366µs, proxy.ts: 204ms, render: 16ms)
+ GET / 200 in 262ms (compile: 1856µs, proxy.ts: 245ms, render: 16ms)
+ GET / 200 in 235ms (compile: 1716µs, proxy.ts: 213ms, render: 20ms)
+ GET /dashboard 200 in 2.7s (compile: 32ms, proxy.ts: 2.4s, render: 268ms)
+ GET / 200 in 276ms (compile: 4ms, proxy.ts: 245ms, render: 28ms)
+ GET / 200 in 217ms (compile: 2ms, proxy.ts: 202ms, render: 12ms)
+ GET / 200 in 221ms (compile: 3ms, proxy.ts: 200ms, render: 18ms)
+ GET /dashboard 200 in 988ms (compile: 3ms, proxy.ts: 696ms, render: 289ms)
+ GET / 200 in 218ms (compile: 3ms, proxy.ts: 198ms, render: 16ms)
+ GET / 200 in 190ms (compile: 2ms, proxy.ts: 178ms, render: 10ms)
+ GET / 200 in 219ms (compile: 3ms, proxy.ts: 189ms, render: 27ms)
+ GET /dashboard 200 in 912ms (compile: 3ms, proxy.ts: 483ms, render: 426ms)
+ GET / 200 in 221ms (compile: 3ms, proxy.ts: 209ms, render: 9ms)
+ GET /dashboard 200 in 701ms (compile: 2ms, proxy.ts: 421ms, render: 278ms)
+ GET / 200 in 229ms (compile: 2ms, proxy.ts: 205ms, render: 22ms)
+ GET / 200 in 211ms (compile: 3ms, proxy.ts: 194ms, render: 15ms)
+ GET /dashboard 200 in 567ms (compile: 1745µs, proxy.ts: 311ms, render: 254ms)
+ GET / 200 in 198ms (compile: 1446µs, proxy.ts: 182ms, render: 14ms)
+ GET / 200 in 216ms (compile: 3ms, proxy.ts: 184ms, render: 28ms)
+ GET /dashboard 200 in 570ms (compile: 3ms, proxy.ts: 299ms, render: 268ms)
+ GET / 200 in 236ms (compile: 7ms, proxy.ts: 210ms, render: 19ms)
+ GET /dashboard 200 in 569ms (compile: 1180µs, proxy.ts: 323ms, render: 244ms)
+ GET / 200 in 219ms (compile: 1936µs, proxy.ts: 202ms, render: 15ms)
+ GET / 200 in 234ms (compile: 13ms, proxy.ts: 202ms, render: 19ms)
+ GET /dashboard 200 in 583ms (compile: 2ms, proxy.ts: 316ms, render: 264ms)
+ GET / 200 in 324ms (compile: 3ms, proxy.ts: 300ms, render: 22ms)
+ GET /dashboard 200 in 666ms (compile: 6ms, proxy.ts: 430ms, render: 230ms)
+ GET / 200 in 233ms (compile: 25ms, proxy.ts: 192ms, render: 15ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET /dashboard 200 in 517ms (compile: 6ms, proxy.ts: 299ms, render: 211ms)
+ GET / 200 in 203ms (compile: 928µs, proxy.ts: 193ms, render: 9ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET /login 200 in 171ms (compile: 39ms, proxy.ts: 88ms, render: 44ms)
+ GET / 200 in 146ms (compile: 2ms, proxy.ts: 125ms, render: 19ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET /login 200 in 154ms (compile: 10ms, proxy.ts: 134ms, render: 10ms)
+ GET / 200 in 142ms (compile: 21ms, proxy.ts: 101ms, render: 19ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET /login 200 in 151ms (compile: 13ms, proxy.ts: 130ms, render: 8ms)
+ GET / 200 in 159ms (compile: 20ms, proxy.ts: 118ms, render: 21ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET /login 200 in 219ms (compile: 10ms, proxy.ts: 125ms, render: 84ms)
+ GET / 200 in 230ms (compile: 21ms, proxy.ts: 113ms, render: 96ms)
+ GET /dashboard 200 in 507ms (compile: 1391µs, proxy.ts: 355ms, render: 152ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 209ms (compile: 2ms, proxy.ts: 187ms, render: 20ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 228ms (compile: 1173µs, proxy.ts: 213ms, render: 14ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 120ms (compile: 4ms, proxy.ts: 106ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 116ms (compile: 1170µs, proxy.ts: 103ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 124ms (compile: 1171µs, proxy.ts: 112ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 123ms (compile: 1150µs, proxy.ts: 110ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 127ms (compile: 1124µs, proxy.ts: 114ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 115ms (compile: 1063µs, proxy.ts: 100ms, render: 14ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 151ms (compile: 4ms, proxy.ts: 135ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 130ms (compile: 1353µs, proxy.ts: 117ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 115ms (compile: 1060µs, proxy.ts: 104ms, render: 10ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 121ms (compile: 1229µs, proxy.ts: 108ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 133ms (compile: 1339µs, proxy.ts: 119ms, render: 13ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 133ms (compile: 1259µs, proxy.ts: 118ms, render: 14ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 112ms (compile: 4ms, proxy.ts: 99ms, render: 10ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 121ms (compile: 1273µs, proxy.ts: 108ms, render: 11ms)
+ GET / 200 in 227ms (compile: 3ms, proxy.ts: 200ms, render: 23ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 134ms (compile: 1070µs, proxy.ts: 119ms, render: 13ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 128ms (compile: 4ms, proxy.ts: 111ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 126ms (compile: 1307µs, proxy.ts: 114ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 142ms (compile: 1240µs, proxy.ts: 129ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 127ms (compile: 1086µs, proxy.ts: 116ms, render: 10ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 157ms (compile: 1412µs, proxy.ts: 142ms, render: 14ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 127ms (compile: 1290µs, proxy.ts: 112ms, render: 14ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 122ms (compile: 3ms, proxy.ts: 109ms, render: 10ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 112ms (compile: 1061µs, proxy.ts: 101ms, render: 9ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 126ms (compile: 1316µs, proxy.ts: 113ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 131ms (compile: 1132µs, proxy.ts: 118ms, render: 11ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 114ms (compile: 1192µs, proxy.ts: 101ms, render: 12ms)
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+Error [AuthApiError]: Request rate limit reached
+    at ignore-listed frames {
+  __isAuthError: true,
+  status: 429,
+  code: 'over_request_rate_limit'
+}
+ GET / 200 in 112ms (compile: 996µs, proxy.ts: 101ms, render: 10ms)
+ GET / 200 in 27ms (compile: 4ms, proxy.ts: 3ms, render: 20ms)
+✓ Compiled in 115ms
+ GET /login 200 in 140ms (compile: 3ms, proxy.ts: 129ms, render: 8ms)
+ GET / 200 in 68ms (compile: 10ms, proxy.ts: 9ms, render: 49ms)
+ GET /login 200 in 22ms (compile: 6ms, proxy.ts: 4ms, render: 12ms)
+ POST /api/auth/login 303 in 853ms (compile: 52ms, proxy.ts: 5ms, render: 796ms)
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /dashboard 200 in 917ms (compile: 68ms, proxy.ts: 397ms, render: 452ms)
+⨯ ./src/app/(app)/facturacion/page.tsx:1:27
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m [33mReact[39m[33m,[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m                           [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { [33mDollarSign[39m[33m,[39m [33mFileText[39m[33m,[39m [33mArrowUpRight[39m[33m,[39m [33mArrowDownRight[39m[33m,[39m [33mMoreVertical[39m[33m,[39m [33mShieldCheck[39m[33m,[39m [33mDownload[39m[33m,[39m [33mPlus[39m[33m,[39m [33mSearch[39m[33m,[39m [33mBuilding[39m[33m,[39m [33mUser[39m[33m,[39m [33mActivity[39m[33m,[39m [33mFileDigit[39m[33m,[39m [33mTrash2[39m[33m,[39m [33mCheckCircle2[39m } [36mfrom[39m [32m'lucide-react'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/client'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m toast [36mfrom[39m [32m'react-hot-toast'[39m[33m;[39m[0m
+
+You're importing a component that needs `useEffect`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+
+./src/app/(app)/facturacion/page.tsx:1:17
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m [33mReact[39m[33m,[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m                 [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { [33mDollarSign[39m[33m,[39m [33mFileText[39m[33m,[39m [33mArrowUpRight[39m[33m,[39m [33mArrowDownRight[39m[33m,[39m [33mMoreVertical[39m[33m,[39m [33mShieldCheck[39m[33m,[39m [33mDownload[39m[33m,[39m [33mPlus[39m[33m,[39m [33mSearch[39m[33m,[39m [33mBuilding[39m[33m,[39m [33mUser[39m[33m,[39m [33mActivity[39m[33m,[39m [33mFileDigit[39m[33m,[39m [33mTrash2[39m[33m,[39m [33mCheckCircle2[39m } [36mfrom[39m [32m'lucide-react'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/client'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m toast [36mfrom[39m [32m'react-hot-toast'[39m[33m;[39m[0m
+
+You're importing a component that needs `useState`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+ GET /facturacion 500 in 1548ms (compile: 1309ms, proxy.ts: 148ms, render: 90ms)
+⨯ ./src/app/(app)/facturacion/page.tsx:1:27
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m [33mReact[39m[33m,[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m                           [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { [33mDollarSign[39m[33m,[39m [33mFileText[39m[33m,[39m [33mArrowUpRight[39m[33m,[39m [33mArrowDownRight[39m[33m,[39m [33mMoreVertical[39m[33m,[39m [33mShieldCheck[39m[33m,[39m [33mDownload[39m[33m,[39m [33mPlus[39m[33m,[39m [33mSearch[39m[33m,[39m [33mBuilding[39m[33m,[39m [33mUser[39m[33m,[39m [33mActivity[39m[33m,[39m [33mFileDigit[39m[33m,[39m [33mTrash2[39m[33m,[39m [33mCheckCircle2[39m } [36mfrom[39m [32m'lucide-react'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/client'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m toast [36mfrom[39m [32m'react-hot-toast'[39m[33m;[39m[0m
+
+You're importing a component that needs `useEffect`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+
+./src/app/(app)/facturacion/page.tsx:1:17
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m [33mReact[39m[33m,[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m                 [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { [33mDollarSign[39m[33m,[39m [33mFileText[39m[33m,[39m [33mArrowUpRight[39m[33m,[39m [33mArrowDownRight[39m[33m,[39m [33mMoreVertical[39m[33m,[39m [33mShieldCheck[39m[33m,[39m [33mDownload[39m[33m,[39m [33mPlus[39m[33m,[39m [33mSearch[39m[33m,[39m [33mBuilding[39m[33m,[39m [33mUser[39m[33m,[39m [33mActivity[39m[33m,[39m [33mFileDigit[39m[33m,[39m [33mTrash2[39m[33m,[39m [33mCheckCircle2[39m } [36mfrom[39m [32m'lucide-react'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/client'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m toast [36mfrom[39m [32m'react-hot-toast'[39m[33m;[39m[0m
+
+You're importing a component that needs `useState`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+ GET /facturacion 500 in 113ms (compile: 5ms, proxy.ts: 104ms, render: 4ms)
+✓ Compiled in 303ms
+ GET /login 200 in 375ms (compile: 5ms, proxy.ts: 353ms, render: 18ms)
+ GET /facturacion 200 in 925ms (compile: 123ms, proxy.ts: 345ms, render: 458ms)
+✓ Compiled in 266ms
+✓ Compiled in 66ms
+ GET /configurador 200 in 1046ms (compile: 357ms, proxy.ts: 661ms, render: 28ms)
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /dashboard 200 in 917ms (compile: 7ms, proxy.ts: 297ms, render: 613ms)
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /dashboard 200 in 599ms (compile: 5ms, proxy.ts: 261ms, render: 333ms)
+ GET /configurador 200 in 222ms (compile: 6ms, proxy.ts: 199ms, render: 17ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 77ms
+ GET /configurador 200 in 693ms (compile: 47ms, proxy.ts: 291ms, render: 354ms)
+ GET /telemedicina 200 in 800ms (compile: 334ms, proxy.ts: 453ms, render: 13ms)
+ GET /plantillas 200 in 314ms (compile: 192ms, proxy.ts: 114ms, render: 8ms)
+ GET /ehr 200 in 517ms (compile: 392ms, proxy.ts: 119ms, render: 7ms)
+ GET /facturacion 200 in 232ms (compile: 60ms, proxy.ts: 152ms, render: 19ms)

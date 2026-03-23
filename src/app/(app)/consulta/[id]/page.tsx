@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+import { CIE10_DB } from '@/lib/data/cie10';
 
 export default function ConsultaPage() {
     const params = useParams();
@@ -127,30 +128,12 @@ export default function ConsultaPage() {
     
     if (!appointment) return <div className="h-screen flex items-center justify-center text-red-500 font-bold">Error: No se encontró la cita médica.</div>;
 
-    const MOCK_CIE10 = [
-        { code: 'J00', desc: 'Rinofaringitis aguda [resfriado común]' },
-        { code: 'J01.9', desc: 'Sinusitis aguda, no especificada' },
-        { code: 'J02.9', desc: 'Faringitis aguda, no especificada' },
-        { code: 'J03.9', desc: 'Amigdalitis aguda, no especificada' },
-        { code: 'J06.9', desc: 'Infección aguda de las vías respiratorias superiores, no especificada' },
-        { code: 'I10', desc: 'Hipertensión esencial (primaria)' },
-        { code: 'E11.9', desc: 'Diabetes mellitus tipo 2 sin complicaciones' },
-        { code: 'E78.5', desc: 'Hiperlipidemia no especificada' },
-        { code: 'E03.9', desc: 'Hipotiroidismo, no especificado' },
-        { code: 'K21.9', desc: 'Enfermedad del reflujo gastroesofágico sin esofagitis' },
-        { code: 'J45.9', desc: 'Asma, no especificada' },
-        { code: 'M54.5', desc: 'Lumbago no especificado' },
-        { code: 'K30', desc: 'Dispepsia' },
-        { code: 'N39.0', desc: 'Infección de vías urinarias, sitio no especificado' },
-        { code: 'A09.9', desc: 'Gastroenteritis y colitis de origen no especificado' },
-        { code: 'F41.1', desc: 'Trastorno de ansiedad generalizada' },
-        { code: 'R51', desc: 'Cefalea' },
-        { code: 'D50.9', desc: 'Anemia por deficiencia de hierro sin otra especificación' },
-        { code: 'H10.9', desc: 'Conjuntivitis, no especificada' },
-        { code: 'L20.9', desc: 'Dermatitis atópica, no especificada' }
-    ];
-
-    const filteredCie10 = cieSearch ? MOCK_CIE10.filter(c => c.desc.toLowerCase().includes(cieSearch.toLowerCase()) || c.code.toLowerCase().includes(cieSearch.toLowerCase())) : MOCK_CIE10;
+    // Filtro multicriterio (palabras separadas) a prueba de errores
+    const filteredCie10 = cieSearch.trim() ? CIE10_DB.filter(c => {
+        const terms = cieSearch.toLowerCase().split(' ').filter(Boolean);
+        const searchTarget = (c.code + " " + c.desc).toLowerCase();
+        return terms.every(term => searchTarget.includes(term));
+    }) : CIE10_DB.slice(0, 20); // Mostrar top 20 por defecto
 
     const selectCie10 = (code: string, desc: string) => {
         const text = note.assessment ? `${note.assessment}\n[${code}] ${desc}` : `[${code}] ${desc}`;
