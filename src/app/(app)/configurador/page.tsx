@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 export default function ConfiguradorPage() {
     const supabase = createClient();
     const [activeTab, setActiveTab] = useState<'clinica' | 'roles' | 'facturacion'>('clinica');
-    const [roles, setRoles] = useState<{ position: string, activeModules: string[] }[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
     
     // Clinic Settings State
     const [duration, setDuration] = useState(30);
@@ -39,11 +39,16 @@ export default function ConfiguradorPage() {
     }, []);
 
     const fetchSettings = async () => {
-        const { data, error } = await supabase.from('clinic_settings').select('*').single();
+        // Configuraciones Clínicas Generales
+        const { data } = await supabase.from('clinic_settings').select('*').single();
         if (data) {
             setDuration(data.consultation_duration_minutes);
             if (data.business_hours) setHours(data.business_hours);
         }
+
+        // Recuperar Roles RBAC
+        const { data: rolesData } = await supabase.from('clinic_roles').select('*').order('name');
+        if (rolesData) setRoles(rolesData);
     };
 
     const handleSaveSettings = async () => {
@@ -281,18 +286,31 @@ export default function ConfiguradorPage() {
                                 {roles.length === 0 ? (
                                     <tr>
                                         <td colSpan={3} className="p-16 text-center text-slate-400 font-bold italic">
-                                            No hay roles o puestos configurados aún.
+                                            Ejecuta el SQL "Fase 15" para habilitar los Grupos Laborales.
                                         </td>
                                     </tr>
-                                ) : roles.map((rol, i) => (
-                                    <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-6 pl-8 font-extrabold text-slate-800">{rol.position}</td>
-                                        <td className="p-6 text-sm flex gap-2">
-                                            {rol.activeModules.map((m, j) => (
-                                                <span key={j} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-100">
+                                ) : roles.map((rol) => (
+                                    <tr key={rol.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="p-6 pl-8">
+                                            <div className="font-extrabold text-slate-800 flex items-center gap-2">
+                                                {rol.name}
+                                                {rol.is_system_admin && <Shield className="w-3.5 h-3.5 text-rose-500" />}
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-1 font-medium">{rol.description}</div>
+                                        </td>
+                                        <td className="p-6 text-sm flex gap-2 flex-wrap max-w-sm">
+                                            {rol.is_system_admin ? (
+                                                <span className="bg-rose-50 text-rose-700 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border border-rose-100 flex items-center gap-1">
+                                                    ACCESO SUPERADMIN (IRRESTRICTO)
+                                                </span>
+                                            ) : rol.active_modules?.map((m: string, j: number) => (
+                                                <span key={j} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border border-indigo-100">
                                                     {m}
                                                 </span>
                                             ))}
+                                            {(!rol.is_system_admin && (!rol.active_modules || rol.active_modules.length === 0)) && (
+                                                <span className="text-slate-400 font-bold text-xs">Sin módulos asignados.</span>
+                                            )}
                                         </td>
                                         <td className="p-6 pr-8 text-right">
                                             <button className="text-indigo-600 hover:text-indigo-800 font-bold text-sm transition-all hover:underline">

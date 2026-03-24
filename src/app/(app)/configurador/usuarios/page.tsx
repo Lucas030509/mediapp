@@ -1,441 +1,191 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Edit2, Trash2, Mail, Shield, User, Building2, CheckCircle2, X, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Users, Shield, Edit, Search, CheckCircle2, AlertCircle, Trash2, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface UserProfile {
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    role: 'ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'ACCOUNTANT';
-    organization_name: string;
-    created_at: string;
-}
 
 export default function UsuariosPage() {
     const supabase = createClient();
-    const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
 
-    // Form data
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '', // Solo para nuevos usuarios
-        first_name: '',
-        last_name: '',
-        role: 'DOCTOR' as UserProfile['role'],
-        organization_name: '',
-    });
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
+    const [selectedRoleId, setSelectedRoleId] = useState<string>('');
 
     useEffect(() => {
-        fetchUsuarios();
+        fetchData();
     }, []);
 
-    const fetchUsuarios = async () => {
+    const fetchData = async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        // Fetch users (profiles) with their assigned RBAC role
+        const { data: userData, error: userError } = await supabase
             .from('profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select(`
+                id, email, first_name, last_name, role, rb_role_id,
+                clinic_roles!rb_role_id ( name, is_system_admin )
+            `)
+            .order('first_name');
 
-        if (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Error al cargar usuarios');
-        } else {
-            setUsuarios(data || []);
-        }
+        if (userData) setUsers(userData);
+
+        // Fetch available roles
+        const { data: roleData } = await supabase.from('clinic_roles').select('*').order('name');
+        if (roleData) setRoles(roleData);
+
         setLoading(false);
     };
 
-    const handleOpenModal = (user: UserProfile | null = null) => {
-        if (user) {
-            setEditingUser(user);
-            setFormData({
-                email: user.email,
-                password: '',
-                first_name: user.first_name,
-                last_name: user.last_name,
-                role: user.role,
-                organization_name: user.organization_name,
-            });
+    const handleOpenEdit = (user: any) => {
+        setEditingUserId(user.id);
+        setSelectedRoleId(user.rb_role_id || '');
+    };
+
+    const handleSaveRole = async () => {
+        if (!editingUserId) return;
+
+        const loadToast = toast.loading('Actualizando permisos...');
+        const { error } = await supabase
+            .from('profiles')
+            .update({ rb_role_id: selectedRoleId || null })
+            .eq('id', editingUserId);
+
+        if (error) {
+            toast.error('Error al actualizar rol', { id: loadToast });
         } else {
-            setEditingUser(null);
-            setFormData({
-                email: '',
-                password: '',
-                first_name: '',
-                last_name: '',
-                role: 'DOCTOR',
-                organization_name: '',
-            });
-        }
-        setShowModal(true);
-    };
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (editingUser) {
-            // Actualizar Perfil
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    first_name: formData.first_name,
-                    last_name: formData.last_name,
-                    role: formData.role,
-                    organization_name: formData.organization_name,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', editingUser.id);
-
-            if (error) {
-                toast.error('Error al actualizar: ' + error.message);
-            } else {
-                toast.success('Usuario actualizado correctamente');
-                setShowModal(false);
-                fetchUsuarios();
-            }
-        } else {
-            // Crear Usuario (Usando una API route para manejar Auth)
-            try {
-                const response = await fetch('/api/users/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    toast.success('Usuario creado con éxito');
-                    setShowModal(false);
-                    fetchUsuarios();
-                } else {
-                    toast.error(result.error || 'Error al crear usuario');
-                }
-            } catch (err) {
-                toast.error('Error de red al crear usuario');
-            }
+            toast.success('Permisos actualizados con éxito', { id: loadToast });
+            setEditingUserId(null);
+            fetchData();
         }
     };
 
-    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string; email: string }>({
-        isOpen: false,
-        userId: '',
-        email: ''
-    });
-
-    const handleDelete = async () => {
-        const { userId } = deleteModal;
-        try {
-            const response = await fetch('/api/users/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId }),
-            });
-
-            if (response.ok) {
-                toast.success('Usuario eliminado correctamente');
-                setDeleteModal({ isOpen: false, userId: '', email: '' });
-                fetchUsuarios();
-            } else {
-                toast.error('Error al eliminar usuario');
-            }
-        } catch (err) {
-            toast.error('Error de red al intentar eliminar');
-        }
-    };
-
-    const filteredUsers = usuarios.filter(u => 
-        u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredUsers = users.filter(u => 
+        (u.first_name || '').toLowerCase().includes(search.toLowerCase()) || 
+        (u.email || '').toLowerCase().includes(search.toLowerCase())
     );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                        <Users className="w-8 h-8 text-indigo-600" />
-                        Gestión de Usuarios
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
+                        <Users className="w-8 h-8 text-indigo-500" />
+                        Directorio de Accesos (Staff)
                     </h1>
-                    <p className="text-slate-500 mt-1">
-                        ABC de personal de la plataforma. Crea cuentas y asigna roles.
-                    </p>
-                </div>
-                <button 
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-indigo-200 transition-all active:scale-95"
-                >
-                    <UserPlus className="w-5 h-5" />
-                    Nuevo Usuario
-                </button>
-            </div>
-
-            {/* Buscador y Filtros */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Buscar por nombre o correo..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
+                    <p className="text-slate-500 mt-1 font-medium">Asigna Grupos Laborales para definir qué puede ver y hacer cada empleado de la clínica.</p>
                 </div>
             </div>
 
-            {/* Tabla de Usuarios */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
+                    <div className="relative w-full sm:w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar por nombre o correo..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold text-sm transition"
+                        />
+                    </div>
+                    <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-2xl font-bold transition shadow-sm w-full sm:w-auto justify-center">
+                        <Key className="w-4 h-4" /> Invitar Médico/Personal
+                    </button>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-100">
+                        <thead className="bg-slate-50 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-400">
                             <tr>
-                                <th className="p-4 font-semibold text-slate-700 text-sm">Usuario</th>
-                                <th className="p-4 font-semibold text-slate-700 text-sm">Organización</th>
-                                <th className="p-4 font-semibold text-slate-700 text-sm">Rol</th>
-                                <th className="p-4 font-semibold text-slate-700 text-sm">Fecha Registro</th>
-                                <th className="p-4 font-semibold text-slate-700 text-sm text-right">Acciones</th>
+                                <th className="p-6 pl-8">Usuario</th>
+                                <th className="p-6">Grupo Laboral Actual</th>
+                                <th className="p-6 pr-8 text-right">Manejo de Acceso</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
-                                Array.from({length: 3}).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td className="p-4"><div className="h-4 bg-slate-100 rounded w-48"></div></td>
-                                        <td className="p-4"><div className="h-4 bg-slate-100 rounded w-32"></div></td>
-                                        <td className="p-4"><div className="h-4 bg-slate-100 rounded w-20"></div></td>
-                                        <td className="p-4"><div className="h-4 bg-slate-100 rounded w-24"></div></td>
-                                        <td className="p-4"><div className="h-4 bg-slate-100 rounded w-16 ml-auto"></div></td>
-                                    </tr>
-                                ))
+                                <tr>
+                                    <td colSpan={3} className="p-10 text-center animate-pulse text-indigo-500 font-bold">Cargando directorio...</td>
+                                </tr>
                             ) : filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="p-12 text-center text-slate-400 font-medium">
-                                        No se encontraron usuarios activos.
-                                    </td>
+                                    <td colSpan={3} className="p-16 text-center text-slate-400 font-bold">No se encontraron usuarios activos.</td>
                                 </tr>
-                            ) : (
-                                filteredUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                                    {user.first_name?.[0] || 'U'}{user.last_name?.[0] || 'S'}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-900">{user.first_name} {user.last_name}</div>
-                                                    <div className="text-xs text-slate-500 flex items-center gap-1">
-                                                        <Mail className="w-3 h-3" />
-                                                        {user.email}
-                                                    </div>
-                                                </div>
+                            ) : filteredUsers.map((user) => (
+                                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="p-6 pl-8">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black">
+                                                {user.first_name?.[0] || user.email?.[0]?.toUpperCase()}
                                             </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium font-sans">
-                                                <Building2 className="w-4 h-4 text-slate-400" />
-                                                {user.organization_name || 'N/A'}
+                                            <div>
+                                                <div className="font-extrabold text-slate-800">{user.first_name} {user.last_name}</div>
+                                                <div className="text-xs text-slate-500 font-medium">{user.email}</div>
                                             </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${user.role === 'ADMIN' 
-                                                ? 'bg-purple-50 text-purple-700 border-purple-100' 
-                                                : user.role === 'DOCTOR' 
-                                                ? 'bg-blue-50 text-blue-700 border-blue-100' 
-                                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                            }`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-sm text-slate-500 font-sans">
-                                            {new Date(user.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={() => handleOpenModal(user)}
-                                                    className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
-                                                    title="Editar"
+                                        </div>
+                                    </td>
+                                    
+                                    <td className="p-6">
+                                        {editingUserId === user.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <select 
+                                                    value={selectedRoleId}
+                                                    onChange={(e) => setSelectedRoleId(e.target.value)}
+                                                    className="w-full max-w-xs px-3 py-2 bg-white border border-indigo-300 rounded-xl font-bold text-sm text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/20"
                                                 >
-                                                    <Edit2 className="w-4 h-4" />
+                                                    <option value="">-- Sin Grupo (Acceso Denegado) --</option>
+                                                    {roles.map(r => (
+                                                        <option key={r.id} value={r.id}>{r.name} {r.is_system_admin ? '⭐' : ''}</option>
+                                                    ))}
+                                                </select>
+                                                <button onClick={handleSaveRole} className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition">
+                                                    <CheckCircle2 className="w-5 h-5" />
                                                 </button>
+                                                <button onClick={() => setEditingUserId(null)} className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition text-xs font-bold px-3">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                {user.clinic_roles ? (
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border ${user.clinic_roles.is_system_admin ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
+                                                        {user.clinic_roles.is_system_admin ? <Shield className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                                                        {user.clinic_roles.name}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                        Esperando Asignación
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </td>
+                                    
+                                    <td className="p-6 pr-8 text-right">
+                                        {editingUserId !== user.id && (
+                                            <div className="flex justify-end gap-2">
                                                 <button 
-                                                    onClick={() => setDeleteModal({ isOpen: true, userId: user.id, email: user.email })}
-                                                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-                                                    title="Eliminar"
+                                                    onClick={() => handleOpenEdit(user)}
+                                                    className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition"
                                                 >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button className="p-2 bg-white border border-slate-200 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            {/* Modal ABC */}
-            {showModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
-                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-900">
-                                    {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
-                                </h2>
-                                <p className="text-xs text-slate-500 font-sans mt-0.5">Completa los campos para {editingUser ? 'actualizar' : 'generar'} acceso.</p>
-                            </div>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSave} className="p-6 space-y-4 font-sans">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                        <User className="w-4 h-4 text-slate-400" /> NOMBRE
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        required
-                                        value={formData.first_name || ""}
-                                        onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700">APELLIDOS</label>
-                                    <input 
-                                        type="text" 
-                                        required
-                                        value={formData.last_name || ""}
-                                        onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                    <Mail className="w-4 h-4 text-slate-400" /> CORREO ELECTRÓNICO
-                                </label>
-                                <input 
-                                    type="email" 
-                                    required
-                                    disabled={!!editingUser}
-                                    value={formData.email || ""}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800 disabled:opacity-50"
-                                />
-                            </div>
-
-                            {!editingUser && (
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700">CONTRASEÑA TEMPORAL</label>
-                                    <input 
-                                        type="password" 
-                                        required
-                                        value={formData.password || ""}
-                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                        <Shield className="w-4 h-4 text-slate-400" /> ROL ASIGNADO
-                                    </label>
-                                    <select 
-                                        value={formData.role || "DOCTOR"}
-                                        onChange={(e) => setFormData({...formData, role: e.target.value as UserProfile['role']})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800"
-                                    >
-                                        <option value="ADMIN">ADMIN</option>
-                                        <option value="DOCTOR">DOCTOR</option>
-                                        <option value="RECEPTIONIST">RECEPCIÓN</option>
-                                        <option value="ACCOUNTANT">CONTADOR</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4 text-slate-400" /> INSTITUCIÓN
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.organization_name || ""}
-                                        onChange={(e) => setFormData({...formData, organization_name: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800 placeholder:text-slate-300"
-                                        placeholder="Opcional"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-4 flex gap-3">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors active:scale-95"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    <CheckCircle2 className="w-5 h-5" />
-                                    {editingUser ? 'Actualizar Cambios' : 'Crear y Notificar'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {/* Modal de Confirmación de Eliminación */}
-            {deleteModal.isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}></div>
-                    <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-8 text-center">
-                            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Trash2 className="w-10 h-10 text-red-500" />
-                            </div>
-                            <h3 className="text-2xl font-extrabold text-slate-900 mb-2">¿Estás seguro?</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Estas a punto de eliminar a <span className="text-slate-900 font-bold">{deleteModal.email}</span>. Esta acción es irreversible.
-                            </p>
-                        </div>
-                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-                            <button 
-                                onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
-                                className="flex-1 px-4 py-3 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all active:scale-95"
-                            >
-                                No, cancelar
-                            </button>
-                            <button 
-                                onClick={handleDelete}
-                                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
-                            >
-                                Sí, eliminar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

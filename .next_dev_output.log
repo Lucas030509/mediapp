@@ -784,3 +784,5 @@ The width(-1) and height(-1) of chart should be greater than 0,
  GET /plantillas 200 in 314ms (compile: 192ms, proxy.ts: 114ms, render: 8ms)
  GET /ehr 200 in 517ms (compile: 392ms, proxy.ts: 119ms, render: 7ms)
  GET /facturacion 200 in 232ms (compile: 60ms, proxy.ts: 152ms, render: 19ms)
+✓ Compiled in 158ms
+✓ Compiled in 118ms
