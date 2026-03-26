@@ -77,10 +77,8 @@ export default function PatientEHRPage() {
         const { data: docsRes } = await supabase.from('patient_documents').select('*').eq('patient_id', id).order('created_at', { ascending: false });
         if(docsRes) setDocuments(docsRes);
 
-        const { data: notesRes } = await supabase.from('clinical_notes').select(`
-            *,
-            doctors(first_name, last_name)
-        `).eq('patient_id', id).order('consultation_date', { ascending: false }).order('created_at', { ascending: false });
+        const { data: notesRes, error: notesError } = await supabase.from('clinical_notes').select(`*`).eq('patient_id', id).order('consultation_date', { ascending: false }).order('created_at', { ascending: false });
+        if(notesError) console.error("Error fetching clinical notes:", notesError);
         if(notesRes) setNotes(notesRes);
 
         const { data: allergiesRes } = await supabase.from('patient_allergies').select('*').eq('patient_id', id).order('created_at', { ascending: false });
