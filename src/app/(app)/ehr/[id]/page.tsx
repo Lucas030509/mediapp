@@ -17,7 +17,8 @@ export default function PatientEHRPage() {
     const [allergies, setAllergies] = useState<any[]>([]);
     const [templates, setTemplates] = useState<any[]>([]);
     const [surgeries, setSurgeries] = useState<any[]>([]);
-    const [lastVitals, setLastVitals] = useState<any>(null); // Nuevo: Últimos signos reales
+    const [allVitals, setAllVitals] = useState<any[]>([]); // Todos los signos para la línea de tiempo
+    const [lastVitals, setLastVitals] = useState<any>(null); // Últimos signos reales para el header
     const [doctorProfile, setDoctorProfile] = useState<any>(null); // Nuevo: Datos del Dr actual
 
     const [isAllergiesModalOpen, setIsAllergiesModalOpen] = useState(false);
@@ -65,9 +66,12 @@ export default function PatientEHRPage() {
         const { data: prof } = await supabase.from('profiles').select('*, doctors(first_name, last_name, specialty)').eq('id', user?.id || '').single();
         if (prof) setDoctorProfile(prof);
         
-        // 3. Cargar últimos Signos Vitales Reales
-        const { data: vRes } = await supabase.from('vital_signs').select('*').eq('patient_id', id).order('created_at', { ascending: false }).limit(1);
-        if (vRes && vRes.length > 0) setLastVitals(vRes[0]);
+        // 3. Cargar historial de Signos Vitales (Triage/Enfermería)
+        const { data: vRes } = await supabase.from('vital_signs').select('*').eq('patient_id', id).order('created_at', { ascending: false });
+        if (vRes) {
+            setAllVitals(vRes);
+            if (vRes.length > 0) setLastVitals(vRes[0]);
+        }
         
         // Cargar imágenes, notas, alergias, plantillas y cirugías
         const { data: docsRes } = await supabase.from('patient_documents').select('*').eq('patient_id', id).order('created_at', { ascending: false });
@@ -182,8 +186,10 @@ export default function PatientEHRPage() {
             }).eq('id', editNoteId);
             error = updateError;
         } else {
+            const { data: { user } } = await supabase.auth.getUser();
             const { error: insertError } = await supabase.from('clinical_notes').insert({
                 patient_id: id,
+                doctor_id: user?.id,
                 consultation_date: new Date(noteData.consultation_date).toISOString(),
                 subjective_text: noteData.subjective_text,
                 objective_text: noteData.objective_text,
@@ -323,6 +329,12 @@ export default function PatientEHRPage() {
         return Math.abs(new Date(diff).getUTCFullYear() - 1970);
     };
 
+    // COMBINAR NOTAS Y SIGNOS PARA LA LÍNEA DEL TIEMPO
+    const timelineItems = [
+        ...notes.map(n => ({ ...n, timelineType: 'note', date: n.consultation_date || n.created_at })),
+        ...allVitals.map(v => ({ ...v, timelineType: 'vitals', date: v.created_at }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex justify-between items-start print:hidden">
@@ -446,81 +458,120 @@ export default function PatientEHRPage() {
                             </div>
 
                             <div className="relative border-l-2 border-slate-100 ml-4 space-y-8">
-                                {notes.length === 0 ? (
-                                    <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 mt-8">
-                                        No hay notas clínicas registradas. Haz clic en "+ Nueva Nota Médica" para crear el primer registro clínico evolutivo. (Modelo SOAP).
+                                {timelineItems.length === 0 ? (
+                                    <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 mt-8 font-medium text-slate-500">
+                                        No hay actividad registrada en la cronología. Haz clic en "+ Nueva Nota Médica" o realiza un Triage en el módulo de Enfermería.
                                     </div>
                                 ) : (
-                                    notes.map((note) => (
-                                        <div key={note.id} className="relative pl-8 animate-in slide-in-from-bottom-4 duration-500">
-                                            <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full border-4 border-white bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shadow-sm">
-                                                <FileText className="w-4 h-4" />
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 shadow-sm relative group">
-                                                <div className="flex justify-between mb-4 pb-4 border-b border-slate-200/60">
-                                                    <div>
-                                                        <h4 className="font-bold text-slate-800 text-lg">Nota de Evolución</h4>
-                                                        <p className="text-sm text-slate-500 font-semibold flex items-center gap-2 mt-0.5">
-                                                            {new Date(note.consultation_date).toLocaleDateString()} • Dr. {note.doctors?.last_name || 'Admin'}
-                                                        </p>
+                                    timelineItems.map((item: any) => (
+                                        <div key={item.id} className="relative pl-8 animate-in slide-in-from-bottom-4 duration-500">
+                                            {item.timelineType === 'note' ? (
+                                                <>
+                                                    <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full border-4 border-white bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shadow-sm">
+                                                        <FileText className="w-4 h-4" />
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button 
-                                                            onClick={() => {
-                                                                setEditNoteId(note.id);
-                                                                setNoteData({
-                                                                    subjective_text: note.subjective_text || '',
-                                                                    objective_text: note.objective_text || '',
-                                                                    analysis_text: note.analysis_text || '',
-                                                                    plan_text: note.plan_text || '',
-                                                                    consultation_date: note.consultation_date.substring(0, 10)
-                                                                });
-                                                                setIsNoteModalOpen(true);
-                                                            }}
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1 rounded-md text-indigo-600 font-bold text-xs h-fit shadow-sm"
-                                                        >
-                                                            Editar/Corregir
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteNote(note.id)}
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1 rounded-md text-red-600 font-bold text-xs h-fit shadow-sm mr-2"
-                                                        >
-                                                            Eliminar
-                                                        </button>
-                                                        <span className="bg-white border border-slate-200 px-3 py-1 rounded-md text-slate-600 font-bold text-xs h-fit shadow-sm flex items-center gap-1 group-hover:opacity-60 transition-opacity uppercase px-2">
-                                                            {note.status === 'final' ? 'Finalizada' : 'Borrador'} 
-                                                        </span>
+                                                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 shadow-sm relative group">
+                                                        <div className="flex justify-between mb-4 pb-4 border-b border-slate-200/60">
+                                                            <div>
+                                                                <h4 className="font-bold text-slate-800 text-lg">Consulta Médica (SOAP)</h4>
+                                                                <p className="text-sm text-slate-500 font-semibold flex items-center gap-2 mt-0.5">
+                                                                    {new Date(item.date).toLocaleDateString()} • Dr. {item.doctors?.last_name || 'Admin'}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setEditNoteId(item.id);
+                                                                        setNoteData({
+                                                                            subjective_text: item.subjective_text || '',
+                                                                            objective_text: item.objective_text || '',
+                                                                            analysis_text: item.analysis_text || '',
+                                                                            plan_text: item.plan_text || '',
+                                                                            consultation_date: item.consultation_date.substring(0, 10)
+                                                                        });
+                                                                        setIsNoteModalOpen(true);
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1 rounded-md text-indigo-600 font-bold text-xs h-fit shadow-sm"
+                                                                >
+                                                                    Editar
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleDeleteNote(item.id)}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1 rounded-md text-red-600 font-bold text-xs h-fit shadow-sm mr-2"
+                                                                >
+                                                                    Eliminar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {item.subjective_text && (
+                                                                <div>
+                                                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Subjetivo</span>
+                                                                    <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed">{item.subjective_text.substring(0, 200)}{item.subjective_text.length > 200 ? '...' : ''}</p>
+                                                                </div>
+                                                            )}
+                                                            {item.analysis_text && (
+                                                                <div>
+                                                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Diagnóstico</span>
+                                                                    <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed">{item.analysis_text}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                
-                                                {/* Representación Estilo ARMED (SOAP) */}
-                                                <div className="space-y-4">
-                                                    {note.subjective_text && (
-                                                        <div>
-                                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Subjetivo / Motivo Consulta</span>
-                                                            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-lg border border-slate-100">{note.subjective_text}</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full border-4 border-white bg-rose-100 text-rose-600 flex items-center justify-center font-bold shadow-sm">
+                                                        <Activity className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="bg-rose-50/30 rounded-xl p-5 border border-rose-100/50 shadow-sm">
+                                                        <div className="flex justify-between mb-3">
+                                                            <div>
+                                                                <h4 className="font-bold text-rose-900 text-base">Evaluación de Enfermería (Signos)</h4>
+                                                                <p className="text-xs text-rose-500 font-bold mt-0.5">
+                                                                    {new Date(item.date).toLocaleDateString()} {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </p>
+                                                            </div>
+                                                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest h-fit ${item.triage_color === 'RED' ? 'bg-red-500 text-white animate-pulse' : item.triage_color === 'YELLOW' ? 'bg-amber-400 text-amber-900' : 'bg-emerald-500 text-white'}`}>
+                                                                {item.triage_color || 'VERDE'}
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    {note.objective_text && (
-                                                        <div>
-                                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Objetivo / Exploración Física</span>
-                                                            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-lg border border-slate-100">{note.objective_text}</p>
+                                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">T.A.</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.blood_pressure || '--'}</span>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">F.C.</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.heart_rate || '--'}</span>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">TEMP</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.temperature || '--'}°</span>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">SpO2</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.oxygen_saturation || '--'}%</span>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">PESO</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.weight || '--'}k</span>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                                                <span className="block text-[9px] font-black text-slate-400 uppercase">GLUC</span>
+                                                                <span className="text-xs font-black text-slate-800">{item.glucose || '--'}</span>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    {note.analysis_text && (
-                                                        <div>
-                                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Análisis / Diagnóstico</span>
-                                                            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-lg border border-slate-100">{note.analysis_text}</p>
-                                                        </div>
-                                                    )}
-                                                    {note.plan_text && (
-                                                        <div>
-                                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Plan (Tratamiento TX)</span>
-                                                            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-lg border border-slate-100">{note.plan_text}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                        {item.nurse_notes && (
+                                                            <div className="mt-3 bg-white/60 p-3 rounded-lg border border-rose-100/30">
+                                                                <span className="block text-[9px] font-black text-rose-400 uppercase mb-1">Nota de Enfermería</span>
+                                                                <p className="text-xs font-medium text-slate-600 italic">"{item.nurse_notes}"</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ))
                                 )}

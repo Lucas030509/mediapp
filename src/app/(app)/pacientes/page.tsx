@@ -75,7 +75,7 @@ export default function PacientesPage() {
 
     const fetchPatients = async () => {
         setLoading(true);
-        let query = supabase.from('patients').select('*').order('created_at', { ascending: false });
+        let query = supabase.from('patients').select('*, clinical_notes:clinical_notes(count), vital_signs:vital_signs(count)').order('created_at', { ascending: false });
 
         if (searchTerm) {
             // Using ilike searches across name, phone, etc. leveraging trgm on the backend
@@ -291,6 +291,7 @@ export default function PacientesPage() {
                                     <th className="p-4">Condición Principal</th>
                                     <th className="p-4">Contacto</th>
                                     <th className="p-4">Fecha de Alta</th>
+                                    <th className="p-4 text-center">Consultas</th>
                                     <th className="p-4 text-center">Riesgo</th>
                                     <th className="p-4 pr-6 text-right">Acciones</th>
                                 </tr>
@@ -318,9 +319,16 @@ export default function PacientesPage() {
                                             <span className="font-medium text-slate-700 truncate max-w-[200px] block">{patient.main_condition || 'Sin diagnóstico registrado'}</span>
                                         </td>
                                         <td className="p-4 font-medium text-slate-500 text-sm">{patient.phone || 'N/A'}</td>
-                                        <td className="p-4 text-sm font-semibold text-slate-500 flex items-center gap-2">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {new Date(patient.created_at).toLocaleDateString()}
+                                        <td className="p-4 text-sm font-semibold text-slate-500">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                {new Date(patient.created_at).toLocaleDateString()}
+                                            </div>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            <span className="inline-flex items-center justify-center min-w-[32px] h-8 px-2 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100 shadow-sm" title="Total de Interacciones (Clínicas + Triage)">
+                                                {(patient.clinical_notes?.[0]?.count || 0) + (patient.vital_signs?.[0]?.count || 0)}
+                                            </span>
                                         </td>
                                         <td className="p-4 text-center">
                                             {patient.status === 'low' && <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 font-bold" title="Riesgo Bajo"><ShieldAlert className="w-4 h-4" /></span>}

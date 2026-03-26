@@ -53,18 +53,25 @@ export default function TriagePage() {
             return;
         }
 
-        const bmi = (vitals.weight && vitals.height) ? 
-            (parseFloat(vitals.weight) / Math.pow(parseFloat(vitals.height)/100, 2)).toFixed(1) : null;
+        const parseOrNull = (val: string, type: 'int' | 'float') => {
+            if (!val || val.trim() === '') return null;
+            const parsed = type === 'int' ? parseInt(val) : parseFloat(val);
+            return isNaN(parsed) ? null : parsed;
+        };
+
+        const weight = parseOrNull(vitals.weight, 'float');
+        const height = parseOrNull(vitals.height, 'float');
+        const bmi = (weight && height) ? (weight / Math.pow(height/100, 2)).toFixed(1) : null;
 
         const payload = {
             patient_id: selectedPatientId,
             blood_pressure: vitals.blood_pressure,
-            heart_rate: parseInt(vitals.heart_rate) || null,
-            temperature: parseFloat(vitals.temperature) || null,
-            respiratory_rate: parseInt(vitals.respiratory_rate) || null,
-            oxygen_saturation: parseInt(vitals.oxygen_saturation) || null,
-            weight: parseFloat(vitals.weight) || null,
-            height: parseFloat(vitals.height) || null,
+            heart_rate: parseOrNull(vitals.heart_rate, 'int'),
+            temperature: parseOrNull(vitals.temperature, 'float'),
+            respiratory_rate: parseOrNull(vitals.respiratory_rate, 'int'),
+            oxygen_saturation: parseOrNull(vitals.oxygen_saturation, 'int'),
+            weight: weight,
+            height: height,
             glucose: vitals.glucose,
             bmi: bmi ? parseFloat(bmi) : null,
             nurse_notes: vitals.nurse_notes,
@@ -73,7 +80,8 @@ export default function TriagePage() {
 
         const { error } = await supabase.from('vital_signs').insert([payload]);
         if (error) {
-            toast.error('Error guardando signos vitales. ¿Ejecutaste el SQL Fase 14?');
+            console.error("Supabase Error:", error);
+            toast.error(`Error guardando: ${error.message} - ¿Ejecutaste el SQL Fase 14 correctamente?`);
         } else {
             toast.success('Evaluación Pre-Clínica guardada exitosamente.');
             setVitals({
