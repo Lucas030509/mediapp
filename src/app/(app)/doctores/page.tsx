@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreVertical, Stethoscope, Mail, Phone, X, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, Stethoscope, Mail, Phone, X, Trash2, Edit2, AlertCircle, Facebook, Linkedin, Instagram, Globe } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+import { normalizeText } from '@/lib/utils/string';
 
 export default function DoctoresPage() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -16,7 +17,8 @@ export default function DoctoresPage() {
     const [specialties, setSpecialties] = useState<{ id: string, name: string }[]>([]);
 
     const [formData, setFormData] = useState({
-        first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: ''
+        first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '',
+        facebook_url: '', linkedin_url: '', instagram_url: ''
     });
     const [editId, setEditId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -92,7 +94,10 @@ export default function DoctoresPage() {
                 license_number: formData.license_number,
                 phone: formData.phone,
                 email: formData.email,
-                default_room_id: formData.default_room_id || null
+                default_room_id: formData.default_room_id || null,
+                facebook_url: formData.facebook_url,
+                linkedin_url: formData.linkedin_url,
+                instagram_url: formData.instagram_url
             }).eq('id', editId);
             error = updateError;
         } else {
@@ -107,7 +112,10 @@ export default function DoctoresPage() {
                 license_number: formData.license_number,
                 phone: formData.phone,
                 email: formData.email,
-                default_room_id: formData.default_room_id || null
+                default_room_id: formData.default_room_id || null,
+                facebook_url: formData.facebook_url,
+                linkedin_url: formData.linkedin_url,
+                instagram_url: formData.instagram_url
             }]);
             error = insertError;
         }
@@ -116,7 +124,10 @@ export default function DoctoresPage() {
         if (!error) {
             setIsModalOpen(false);
             setEditId(null);
-            setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '' });
+            setFormData({ 
+                first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '',
+                facebook_url: '', linkedin_url: '', instagram_url: ''
+            });
             fetchDoctors();
         } else {
             setErrorModal({
@@ -130,8 +141,9 @@ export default function DoctoresPage() {
 
     const filteredDoctors = doctors.filter(d => {
         const specName = d.specialties?.name || d.specialty || '';
-        return `${d.first_name} ${d.last_name} ${d.second_last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            specName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const fullName = `${d.first_name} ${d.last_name} ${d.second_last_name || ''}`;
+        return normalizeText(fullName).includes(normalizeText(searchTerm)) ||
+            normalizeText(specName).includes(normalizeText(searchTerm)) ||
             (d.license_number && d.license_number.includes(searchTerm));
     });
 
@@ -143,7 +155,14 @@ export default function DoctoresPage() {
                     <p className="text-slate-500 mt-1 font-medium">Catálogo de especialistas y registros de cédula profesional.</p>
                 </div>
 
-                <button onClick={() => { setEditId(null); setFormData({ first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '' }); setIsModalOpen(true); }} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
+                <button onClick={() => { 
+                    setEditId(null); 
+                    setFormData({ 
+                        first_name: '', last_name: '', second_last_name: '', rfc: '', specialty_id: '', license_number: '', phone: '', email: '', default_room_id: '',
+                        facebook_url: '', linkedin_url: '', instagram_url: ''
+                    }); 
+                    setIsModalOpen(true); 
+                }} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5">
                     <Plus className="w-5 h-5" />
                     Nuevo Doctor
                 </button>
@@ -203,12 +222,35 @@ export default function DoctoresPage() {
                                         <td className="p-4 font-medium text-slate-500 text-sm">
                                             <div className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {doc.phone || 'N/A'}</div>
                                             <div className="flex items-center gap-1 mt-1 text-xs"><Mail className="w-3.5 h-3.5" /> {doc.email || 'N/A'}</div>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                {doc.facebook_url && <a href={doc.facebook_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800"><Facebook className="w-4 h-4" /></a>}
+                                                {doc.instagram_url && <a href={doc.instagram_url} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800"><Instagram className="w-4 h-4" /></a>}
+                                                {doc.linkedin_url && <a href={doc.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800"><Linkedin className="w-4 h-4" /></a>}
+                                            </div>
                                         </td>
                                         <td className="p-4 text-center">
                                             <span className="inline-flex items-center justify-center px-2 py-1 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded uppercase">Activo</span>
                                         </td>
                                         <td className="p-4 pr-6 text-right space-x-2">
-                                            <button onClick={(e) => { e.stopPropagation(); setEditId(doc.id); setFormData({ first_name: doc.first_name, last_name: doc.last_name, second_last_name: doc.second_last_name || '', rfc: doc.rfc || '', specialty_id: doc.specialty_id || '', license_number: doc.license_number, phone: doc.phone || '', email: doc.email || '', default_room_id: doc.default_room_id || '' }); setIsModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block text-slate-600" title="Editar">
+                                            <button onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setEditId(doc.id); 
+                                                setFormData({ 
+                                                    first_name: doc.first_name, 
+                                                    last_name: doc.last_name, 
+                                                    second_last_name: doc.second_last_name || '', 
+                                                    rfc: doc.rfc || '', 
+                                                    specialty_id: doc.specialty_id || '', 
+                                                    license_number: doc.license_number, 
+                                                    phone: doc.phone || '', 
+                                                    email: doc.email || '', 
+                                                    default_room_id: doc.default_room_id || '',
+                                                    facebook_url: doc.facebook_url || '',
+                                                    linkedin_url: doc.linkedin_url || '',
+                                                    instagram_url: doc.instagram_url || ''
+                                                }); 
+                                                setIsModalOpen(true); 
+                                            }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block text-slate-600" title="Editar">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button 
@@ -300,6 +342,43 @@ export default function DoctoresPage() {
                                                 <option key={r.id} value={r.id}>{r.name} {r.specialty ? `(${r.specialty})` : ''}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sección 3: Redes Sociales */}
+                            <div className="mt-8 space-y-4">
+                                <h4 className="font-bold text-xs uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Redes Sociales y Presencia Digital</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div className="relative">
+                                        <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
+                                        <input 
+                                            type="url" 
+                                            placeholder="URL de Facebook" 
+                                            value={formData.facebook_url} 
+                                            onChange={e => setFormData({ ...formData, facebook_url: e.target.value })} 
+                                            className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-medium text-slate-700 text-sm" 
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-600" />
+                                        <input 
+                                            type="url" 
+                                            placeholder="URL de Instagram" 
+                                            value={formData.instagram_url} 
+                                            onChange={e => setFormData({ ...formData, instagram_url: e.target.value })} 
+                                            className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-medium text-slate-700 text-sm" 
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-600" />
+                                        <input 
+                                            type="url" 
+                                            placeholder="URL de LinkedIn" 
+                                            value={formData.linkedin_url} 
+                                            onChange={e => setFormData({ ...formData, linkedin_url: e.target.value })} 
+                                            className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-medium text-slate-700 text-sm" 
+                                        />
                                     </div>
                                 </div>
                             </div>

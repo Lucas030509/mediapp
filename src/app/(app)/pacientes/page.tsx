@@ -78,9 +78,23 @@ export default function PacientesPage() {
         let query = supabase.from('patients').select('*, clinical_notes:clinical_notes(count), vital_signs:vital_signs(count)').order('created_at', { ascending: false });
 
         if (searchTerm) {
-            // Using ilike searches across name, phone, etc. leveraging trgm on the backend
-            const term = `%${searchTerm}%`;
-            query = query.or(`first_name.ilike.${term},last_name.ilike.${term},second_last_name.ilike.${term},rfc.ilike.${term},phone.ilike.${term},main_condition.ilike.${term}`);
+            // Convierte el término en un patrón regex que ignora acentos (ej: "jose" -> "j[oóòöôOÓÒÖÔ]s[eéèëêEÉÈËÊ]")
+            const buildRegex = (str: string) => {
+                return str.split('').map(char => {
+                    if (/[aáàäâ]/i.test(char)) return '[aáàäâAÁÀÄÂ]';
+                    if (/[eéèëê]/i.test(char)) return '[eéèëêEÉÈËÊ]';
+                    if (/[iíìïî]/i.test(char)) return '[iíìïîIÍÌÏÎ]';
+                    if (/[oóòöô]/i.test(char)) return '[oóòöôOÓÒÖÔ]';
+                    if (/[uúùüû]/i.test(char)) return '[uúùüûUÚÙÜÛ]';
+                    if (/[nñ]/i.test(char)) return '[nñNÑ]';
+                    return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                }).join('');
+            };
+            
+            // Usamos imatch (regex case-insensitive) en vez de ilike. 
+            // Envolvemos en comillas dobles para que caracteres especiales (ej: comas) no rompan el .or()
+            const regexTerm = `".*${buildRegex(searchTerm)}.*"`;
+            query = query.or(`first_name.imatch.${regexTerm},last_name.imatch.${regexTerm},second_last_name.imatch.${regexTerm},rfc.imatch.${regexTerm},phone.imatch.${regexTerm},main_condition.imatch.${regexTerm}`);
         }
 
         const { data, error } = await query;

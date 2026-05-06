@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Clock, MapPin, Video, CheckCircle2, User, St
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { syncAppointmentToGoogleCalendar } from '@/app/actions/calendar';
 
 export default function AgendaPage() {
     const supabase = createClient();
@@ -192,6 +193,21 @@ export default function AgendaPage() {
             setFormData({ ...formData, patient_id: '', start_time: '09:00', end_time: '09:30' });
             fetchAppointments(currentDate, viewMode);
             toast.success("Cita agendada correctamente");
+
+            // --- SINCRONIZACIÓN GOOGLE CALENDAR ---
+            const patient = patients.find(p => p.id === formData.patient_id);
+            const doctor = doctors.find(d => d.id === formData.doctor_id);
+            
+            if (doctor) {
+                syncAppointmentToGoogleCalendar(doctor.id, {
+                    summary: `Consulta: ${patient?.first_name} ${patient?.last_name}`,
+                    description: `Tipo: ${formData.type}. Gestionado vía AQUA SaaS.`,
+                    start: `${formData.appointment_date}T${formData.start_time}:00`,
+                    end: `${formData.appointment_date}T${formData.end_time}:00`
+                }).then(res => {
+                    if (res.success) toast.success("Sincronizado con Google Calendar", { icon: '📅' });
+                });
+            }
         } else {
             toast.error("Error al agendar cita: " + error.message);
         }
@@ -247,6 +263,19 @@ export default function AgendaPage() {
             toast.success("Cita reagendada exitosamente");
             setRescheduleModal({ isOpen: false, id: '', date: '', start_time: '', end_time: '' });
             fetchAppointments(currentDate, viewMode);
+
+            // --- SINCRONIZACIÓN GOOGLE CALENDAR (UPDATE) ---
+            const currentApt = appointments.find(a => a.id === rescheduleModal.id);
+            if (currentApt?.doctor_id) {
+                syncAppointmentToGoogleCalendar(currentApt.doctor_id, {
+                    summary: `REAGENDADO: ${currentApt.patients?.first_name} ${currentApt.patients?.last_name}`,
+                    description: `Cita movida al ${rescheduleModal.date}.`,
+                    start: `${rescheduleModal.date}T${rescheduleModal.start_time}:00`,
+                    end: `${rescheduleModal.date}T${rescheduleModal.end_time}:00`
+                }).then(res => {
+                    if (res.success) toast.success("Google Calendar actualizado", { icon: '📅' });
+                });
+            }
         } else {
             toast.error("Error al reagendar cita: " + error.message);
         }
@@ -410,6 +439,26 @@ export default function AgendaPage() {
                                 <span className="font-bold bg-white/20 px-2 py-0.5 rounded text-white">{pendingCount}</span>
                             </div>
                         )}
+                    </div>
+
+                    {/* Botón de Google Calendar para Médicos */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sincronización Externa</h4>
+                        <button 
+                            onClick={async () => {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                const { data: profile } = await supabase.from('profiles').select('doctor_id').eq('id', user?.id || '').single();
+                                if (profile?.doctor_id) {
+                                    window.location.href = `/api/integrations/google/auth?doctorId=${profile.doctor_id}`;
+                                } else {
+                                    toast.error("Debes tener un perfil de médico vinculado para usar esta función.");
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 shadow-sm"
+                        >
+                            <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Google Calendar" className="w-5 h-5" />
+                            Vincular Google Calendar
+                        </button>
                     </div>
                 </div>
 

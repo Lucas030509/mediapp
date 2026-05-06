@@ -1,6 +1,48 @@
+"use client"
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (searchParams.get('error') === 'true' || searchParams.get('reason')) {
+            setError('Credenciales incorrectas o sesión expirada. Por favor, inténtalo de nuevo.');
+        }
+    }, [searchParams]);
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        const supabase = createClient();
+
+        const { error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (authError) {
+            console.error("Login Error:", authError);
+            setError('Credenciales incorrectas. Por favor, inténtalo de nuevo.');
+            setLoading(false);
+            return;
+        }
+
+        // Éxito: envia al Core de la Aplicación
+        router.push('/dashboard');
+        router.refresh(); // Asegura que el middleware y layout tomen la nueva cookie
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -17,7 +59,7 @@ export default function LoginPage() {
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-100">
-                    <form className="space-y-6" action="/api/auth/login" method="POST">
+                    <form className="space-y-6" onSubmit={handleLogin}>
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                                 Correo electrónico
@@ -29,7 +71,9 @@ export default function LoginPage() {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="appearance-none block w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
                         </div>
@@ -45,7 +89,9 @@ export default function LoginPage() {
                                     type="password"
                                     autoComplete="current-password"
                                     required
-                                    className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="appearance-none block w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
                         </div>
@@ -73,15 +119,19 @@ export default function LoginPage() {
                         <div>
                             <button
                                 type="submit"
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition"
+                                disabled={loading}
+                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition disabled:bg-indigo-400"
                             >
-                                Inicia Sesión
+                                {loading ? 'Iniciando...' : 'Inicia Sesión'}
                             </button>
                         </div>
                     </form>
 
-                    {/* Componente visual para mostrar errores post-redirect o pre-renderizados en query params */}
-                    {/* <div className="mt-4 text-xs text-red-600 bg-red-50 p-2 rounded text-center"></div> */}
+                    {error && (
+                        <div id="error-message" className="mt-4 text-xs text-red-600 bg-red-50 p-2 rounded text-center">
+                            {error}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

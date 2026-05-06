@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Activity, Thermometer, User, Search, Stethoscope, Heart, Info, Clock, CheckCircle2, AlertTriangle, Building, MapPin, ClipboardList, Weight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+import { normalizeText } from '@/lib/utils/string';
 
 export default function TriagePage() {
     const supabase = createClient();
@@ -25,6 +26,26 @@ export default function TriagePage() {
 
     // Room Assignment Form
     const [assignForm, setAssignForm] = useState({ doctor_id: '', room_name: '', notes: 'Turno Actual' });
+
+    // Autocomplete State para Médicos
+    const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
+    const [isDoctorDropdownOpen, setIsDoctorDropdownOpen] = useState(false);
+    const doctorDropdownRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (doctorDropdownRef.current && !doctorDropdownRef.current.contains(event.target as Node)) {
+                setIsDoctorDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredDoctors = doctors.filter(d => {
+        const fullName = `DR. ${d.first_name || ''} ${d.last_name || ''} ${d.specialty || ''}`;
+        return normalizeText(fullName).includes(normalizeText(doctorSearchQuery));
+    });
 
     useEffect(() => {
         fetchData();
@@ -113,8 +134,8 @@ export default function TriagePage() {
     };
 
     const filteredPatients = patients.filter(p => 
-        p.first_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        p.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        normalizeText(p.first_name).includes(normalizeText(searchQuery)) || 
+        normalizeText(p.last_name || '').includes(normalizeText(searchQuery))
     );
 
     const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
@@ -302,14 +323,43 @@ export default function TriagePage() {
                                 <MapPin className="w-4 h-4" /> Ejecutar Asignación
                             </h3>
                             <form onSubmit={handleAssignRoom} className="space-y-6">
-                                <div>
+                                <div ref={doctorDropdownRef} className="relative">
                                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Médico en Turno</label>
-                                    <select value={assignForm.doctor_id} onChange={e=>setAssignForm({...assignForm, doctor_id: e.target.value})} className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-800 shadow-sm appearance-none">
-                                        <option value="">-- Seleccionar Médico Activo --</option>
-                                        {doctors.map(d => (
-                                            <option key={d.id} value={d.id}>DR. {d.first_name?.toUpperCase()} {d.last_name?.toUpperCase()} ({d.specialty})</option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="-- Buscar Médico Activo --"
+                                            value={doctorSearchQuery}
+                                            onClick={() => setIsDoctorDropdownOpen(true)}
+                                            onChange={(e) => {
+                                                setDoctorSearchQuery(e.target.value);
+                                                setIsDoctorDropdownOpen(true);
+                                                setAssignForm({ ...assignForm, doctor_id: '' });
+                                            }}
+                                            className="w-full pl-10 pr-5 py-3.5 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-800 shadow-sm transition-all"
+                                        />
+                                        {isDoctorDropdownOpen && (
+                                            <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                                {filteredDoctors.length > 0 ? filteredDoctors.map(d => (
+                                                    <div 
+                                                        key={d.id} 
+                                                        className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                                                        onClick={() => {
+                                                            setAssignForm({ ...assignForm, doctor_id: d.id });
+                                                            setDoctorSearchQuery(`DR. ${d.first_name?.toUpperCase()} ${d.last_name?.toUpperCase()} (${d.specialty})`);
+                                                            setIsDoctorDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <div className="font-bold text-slate-800 text-sm">DR. {d.first_name?.toUpperCase()} {d.last_name?.toUpperCase()}</div>
+                                                        <div className="text-xs text-indigo-500 font-bold uppercase tracking-widest mt-0.5">{d.specialty}</div>
+                                                    </div>
+                                                )) : (
+                                                    <div className="px-5 py-6 text-sm text-slate-500 text-center font-medium">No se encontraron médicos.</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Asignar a Cuarto / Espacio Físico</label>

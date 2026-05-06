@@ -1,24 +1,32 @@
-import "./globals.css";
-import { Inter } from "next/font/google";
-import { Metadata } from "next";
+import './globals.css';
+import { Metadata } from 'next';
+import { Geist, Geist_Mono } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-    title: "SaaS Core Engine",
-    description: "B2B SaaS Core Engine generated with Next.js",
+  title: 'HealthCareOS | El Software Médico que Revoluciona tu Práctica',
+  description: 'La plataforma integral para la gestión de consultorios y expedientes médicos digitales.',
 };
 
 export default function RootLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    return (
-        <html lang="en" className="h-full">
-            <body className={`${inter.className} h-full bg-slate-50 antialiased`}>
-                {children}
-            </body>
-        </html>
-    );
+  return (
+    <html lang="es">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {children}
+      </body>
+    </html>
+  );
 }

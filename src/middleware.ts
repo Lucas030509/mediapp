@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } })
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -31,13 +31,15 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAppRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/configurador')
+  const publicRoutes = ['/', '/login', '/registro', '/test', '/api/auth/login', '/api/auth/logout']
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith('/_next')
+  const isAppRoute = !isPublicRoute
 
   // === 1. Verificación básica: Auth requerida ===
   if (isAppRoute && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/login?reason=middleware_auth_missing', request.url))
   }
+
 
   // === 2. Verificación de Roles Granular (Feature Flag) ===
   if (isAppRoute && user) {

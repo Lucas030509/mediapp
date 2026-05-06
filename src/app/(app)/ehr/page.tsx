@@ -5,6 +5,7 @@ import { Search, User, ChevronRight, FileText, Database, Activity, Heart, Calend
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { normalizeText } from '@/lib/utils/string';
 
 export default function EHRSearchPage() {
     const supabase = createClient();
@@ -29,9 +30,10 @@ export default function EHRSearchPage() {
         setLoading(false);
     };
 
-    const filteredPatients = patients.filter(p => 
-        `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPatients = patients.filter(p => {
+        const fullName = `${p.first_name} ${p.last_name} ${p.second_last_name || ''}`;
+        return normalizeText(fullName).includes(normalizeText(searchTerm));
+    });
 
     const calculateAge = (dob: string) => {
         if (!dob) return '-';

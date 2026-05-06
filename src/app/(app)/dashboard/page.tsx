@@ -1,7 +1,20 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+// @ts-ignore
+import { AreaChart } from 'recharts/lib/chart/AreaChart';
+// @ts-ignore
+import { Area } from 'recharts/lib/cartesian/Area';
+// @ts-ignore
+import { XAxis } from 'recharts/lib/cartesian/XAxis';
+// @ts-ignore
+import { YAxis } from 'recharts/lib/cartesian/YAxis';
+// @ts-ignore
+import { CartesianGrid } from 'recharts/lib/cartesian/CartesianGrid';
+// @ts-ignore
+import { Tooltip } from 'recharts/lib/component/Tooltip';
+// @ts-ignore
+import { ResponsiveContainer } from 'recharts/lib/component/ResponsiveContainer';
 import { Users, UserPlus, FileText, CheckCircle, TrendingUp, Sparkles, Video, Calendar } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
